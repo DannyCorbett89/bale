@@ -1,6 +1,6 @@
 use bale;
 
-drop table mount;
+drop table if exists mount;
 create table mount (
   id int not null auto_increment,
   name varchar(200),
@@ -33,7 +33,7 @@ insert into mount (name, instance) values ("Legendary Kamuy", "Shinryu");
 # insert into mount (name, instance) values ("Ixion", "Ixion");
 # insert into mount (name, instance) values ("Magitek Predator", "Magitek Predator - Ala Mhigo");
 
-drop table player;
+drop table if exists player;
 create table player (
   id int not null auto_increment,
   name varchar(200),
@@ -49,7 +49,7 @@ insert into player (name) values ("Lelouch Vi");
 insert into player (name) values ("Jazrail Paraxoi");
 insert into player (name) values ("Neos Darkbright");
 
-drop table mount_link;
+drop table if exists mount_link;
 create table mount_link (
   id int not null auto_increment,
   player_id int,
