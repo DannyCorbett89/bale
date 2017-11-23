@@ -9,7 +9,8 @@ import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import lombok.AllArgsConstructor;
+import lombok.NonNull;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -26,15 +28,16 @@ import java.util.stream.Collectors;
 
 @RequestMapping("/mounts")
 @RestController
-@AllArgsConstructor(onConstructor = @__(@Autowired))
+@RequiredArgsConstructor(onConstructor = @__(@Autowired))
 public class MountController {
     private static final String BASE_URL = "https://na.finalfantasyxiv.com";
     private static final Map<String, String> PLAYER_URLS = new HashMap<>();
-    private static final Map<String, List<String>> PLAYER_MOUNTS = new HashMap<>();
+    private static final Map<String, List<Mount>> PLAYER_MOUNTS = new HashMap<>();
 
-    private HttpClient httpClient;
-    private MountRepository mountRepository;
-    private PlayerRepository playerRepository;
+    @NonNull private HttpClient httpClient;
+    @NonNull private MountRepository mountRepository;
+    @NonNull private PlayerRepository playerRepository;
+    private String lastUpdated = "Never";
 
     @RequestMapping(method = RequestMethod.GET, produces = {MediaType.TEXT_HTML_VALUE})
     public String listMountsHTML(@RequestParam(value = "refresh", required = false) String refresh) throws IOException {
@@ -42,7 +45,7 @@ public class MountController {
             loadMounts();
         }
 
-        SortedSet<Map.Entry<String, List<String>>> sortedSet = new TreeSet<>((o1, o2) -> {
+        SortedSet<Map.Entry<String, List<Mount>>> sortedSet = new TreeSet<>((o1, o2) -> {
             int size1 = o1.getValue().size();
             int size2 = o2.getValue().size();
 
@@ -65,15 +68,15 @@ public class MountController {
         Grid grid = new Grid(numRows, numColumns + 1);
         int row = 0;
 
-        for (Map.Entry<String, List<String>> entry : sortedSet) {
+        for (Map.Entry<String, List<Mount>> entry : sortedSet) {
             String playerName = entry.getKey();
-            List<String> mounts = entry.getValue();
+            List<Mount> mounts = entry.getValue();
 
             grid.setValue(row, 0, playerName);
 
-            for (String mount : mounts) {
+            for (Mount mount : mounts) {
                 try {
-                    grid.setValue(row, Math.toIntExact(totalMounts.get(mount).getId()), mount);
+                    grid.setValue(row, Math.toIntExact(mount.getId()), mount.getInstance());
                 } catch(Exception e) {
                     e.printStackTrace();
                 }
@@ -84,12 +87,13 @@ public class MountController {
 
         return "<html><head><style>" +
                 "table {border-collapse: collapse; border-style: solid;} " +
-                "td, th {padding: 10px; font-family: helvetica; font-size: 14px;}" +
+                "td, th {padding: 10px;} " +
+                "td, th, p {font-family: helvetica; font-size: 14px;}" +
                 "</style></head><body>" +
                 "<table border=\"1\"><tr><th>Name</th><th colspan=\"" + grid.numColumnsWithValue() +
                 "\">Mounts needed</th></tr>" +
                 grid.toHTML() +
-                "</table></body></html>";
+                "</table><p>Last Updated: " + lastUpdated + "</body></html>";
     }
 
     @RequestMapping(value = "/json", method = RequestMethod.GET, produces = {MediaType.APPLICATION_JSON_VALUE})
@@ -98,10 +102,14 @@ public class MountController {
             loadMounts();
         }
 
+        Map<String, Object> result = new HashMap<>();
+        result.put("mounts", PLAYER_MOUNTS);
+        result.put("lastUpdated", lastUpdated);
+
         ObjectMapper mapper = new ObjectMapper();
         mapper.enable(SerializationFeature.INDENT_OUTPUT);
         mapper.setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY);
-        return mapper.writeValueAsString(PLAYER_MOUNTS);
+        return mapper.writeValueAsString(result);
     }
 
     @Scheduled(fixedRate = 3600000)
@@ -130,11 +138,8 @@ public class MountController {
         });
 
         // Get the list of all mounts that each player has
-        Map<String, List<String>> mountsFromWebsite = loaders.entrySet().stream()
-                .collect(Collectors.toMap(entry -> entry.getKey().getName(), entry -> entry.getKey().getMounts()
-                        .stream()
-                        .map(Mount::getName)
-                        .collect(Collectors.toList())));
+        Map<String, List<Mount>> mountsFromWebsite = loaders.entrySet().stream()
+                .collect(Collectors.toMap(entry -> entry.getKey().getName(), entry -> entry.getKey().getMounts()));
 
         // Convert it to a list of mounts that each player does not
         // have from the list of total mounts
@@ -143,9 +148,11 @@ public class MountController {
                 .collect(Collectors.toMap(Map.Entry::getKey, entry -> totalMounts
                         .values()
                         .stream()
-                        .filter(mount -> !entry.getValue().contains(mount.getName()))
-                        .map(Mount::getInstance)
+                        .filter(mount -> !entry.getValue().contains(mount))
                         .collect(Collectors.toList()))));
+
+        SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm");
+        lastUpdated = sdf.format(new Date());
     }
 
     public class MountLoader extends Thread {

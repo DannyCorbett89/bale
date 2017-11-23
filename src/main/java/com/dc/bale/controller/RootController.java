@@ -13,7 +13,6 @@ public class RootController {
         return "<html><head><style>" +
                 "p {font-family: helvetica; font-size: 14px;}" +
                 "</style></head><body>" +
-                "<p>Not implemented. Check mount progress <a href=\"/mounts\">here</a></p>" +
-                "</body></html>";
+                "<p>Not implemented</p></body></html>";
     }
 }
