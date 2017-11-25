@@ -41,7 +41,8 @@ public class MountController {
     private String lastUpdated = "Never";
 
     @RequestMapping(method = RequestMethod.GET, produces = {MediaType.TEXT_HTML_VALUE})
-    public String listMountsHTML(@RequestParam(value = "refresh", required = false) String refresh) throws IOException {
+    public String listMountsHTML(@RequestParam(value = "refresh", required = false) String refresh,
+                                 @RequestParam(value = "display", required = false) String display) throws IOException {
         if(refresh != null && refresh.equals("true")) {
             loadMounts();
         }
@@ -77,7 +78,13 @@ public class MountController {
 
             for (Mount mount : mounts) {
                 try {
-                    grid.setValue(row, Math.toIntExact(mount.getId()), mount.getInstance());
+                    String value = mount.getInstance();
+
+                    if(display != null && display.equals("mountNames")) {
+                        value += "<br>(" + mount.getName() + ")";
+                    }
+
+                    grid.setValue(row, Math.toIntExact(mount.getId()), value);
                 } catch(Exception e) {
                     e.printStackTrace();
                 }
