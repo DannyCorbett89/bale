@@ -26,7 +26,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-@RequestMapping("/mounts")
+// TODO: Switch back to /mounts when there is some content for RootController
+@RequestMapping("/")
 @RestController
 @RequiredArgsConstructor(onConstructor = @__(@Autowired))
 public class MountController {

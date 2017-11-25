@@ -56,3 +56,11 @@ create table mount_link (
   mount_id int,
   primary key (id)
 );
+
+drop table if exists config;
+create table config (
+  id int not null auto_increment,
+  name varchar(200),
+  value varchar(200),
+  primary key (id)
+);
