@@ -11,15 +11,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
+import org.apache.http.NameValuePair;
+import org.apache.http.client.utils.URLEncodedUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.regex.Matcher;
@@ -33,6 +33,7 @@ import java.util.stream.Collectors;
 public class MountController {
     private static final String BASE_URL = "https://na.finalfantasyxiv.com";
     private static final Map<String, String> PLAYER_URLS = new HashMap<>();
+    private static final List<String> OTHER_PLAYER_NAMES = new ArrayList<>();
     private static final Map<String, List<Mount>> PLAYER_MOUNTS = new HashMap<>();
 
     @NonNull private HttpClient httpClient;
@@ -93,15 +94,36 @@ public class MountController {
             row++;
         }
 
+        StringBuilder sb = new StringBuilder();
+        OTHER_PLAYER_NAMES.forEach(s -> sb
+                .append("<option value=\"")
+                .append(s)
+                .append("\">")
+                .append(s)
+                .append("</option>\n"));
+
         return "<html><head><style>" +
                 "table {border-collapse: collapse; border-style: solid;} " +
                 "td, th {padding: 10px;} " +
                 "td, th, p {font-family: helvetica; font-size: 14px;}" +
-                "</style></head><body>" +
+                "</style>" +
+                "<link rel=\"stylesheet\" href=\"https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css\">\n" +
+                "<script src=\"https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js\"></script>\n" +
+                "<script src=\"https://code.jquery.com/ui/1.12.1/jquery-ui.js\"></script>\n" +
+                "<script src=\"resources/bale.js\"></script>" +
+                "</head><body>" +
                 "<table border=\"1\"><tr><th>Name</th><th colspan=\"" + grid.numColumnsWithValue() +
                 "\">Mounts needed</th></tr>" +
                 grid.toHTML() +
-                "</table><p>Last Updated: " + lastUpdated + "</body></html>";
+                "</table>" +
+                "<p>Last Updated: " + lastUpdated + "</p>" +
+                "<input type=\"button\" id=\"newPlayerButton\" value=\"Add Player\"/>" +
+                "<div id=\"newPlayerList\" title=\"Add Player\">\n" +
+                "<select name=\"player\">\n" +
+                sb.toString() +
+                "</select>\n" +
+                "</div>" +
+                "</body></html>";
     }
 
     @RequestMapping(value = "/json", method = RequestMethod.GET, produces = {MediaType.APPLICATION_JSON_VALUE})
@@ -118,6 +140,43 @@ public class MountController {
         mapper.enable(SerializationFeature.INDENT_OUTPUT);
         mapper.setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY);
         return mapper.writeValueAsString(result);
+    }
+
+    @RequestMapping(value = "/addPlayer", method = RequestMethod.POST, produces = {MediaType.APPLICATION_JSON_VALUE})
+    public String addPlayer(@RequestBody(required = false) String body) throws IOException {
+        try {
+            String playerName = URLEncodedUtils.parse(body, Charset.defaultCharset()).stream()
+                    .filter(nameValuePair -> nameValuePair.getName().equals("player"))
+                    .map(NameValuePair::getValue)
+                    .findFirst()
+                    .orElse(null);
+            Player player = Player.builder()
+                    .name(playerName)
+                    .mounts(new ArrayList<>())
+                    .build();
+            playerRepository.save(player);
+            loadMounts();
+            OTHER_PLAYER_NAMES.remove(playerName);
+            return "{\"status\":\"success\"}";
+        } catch (Exception e) {
+            return "{\"status\":\"error\"}";
+        }
+    }
+
+    @RequestMapping(value = "/removePlayer", method = RequestMethod.GET, produces = {MediaType.APPLICATION_JSON_VALUE})
+    public String removePlayer(@RequestParam(value = "playerName") String playerName) throws IOException {
+        try {
+            Player player = playerRepository.findByName(playerName);
+
+            if(player != null) {
+                playerRepository.delete(player);
+                loadMounts();
+                return "{\"status\":\"success\"}";
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return "{\"status\":\"error\"}";
     }
 
     @Scheduled(fixedRate = 3600000)
@@ -205,23 +264,19 @@ public class MountController {
     }
 
     private void loadPlayerUrls(List<Player> players) throws IOException {
-        if(players.stream()
-                .filter(player -> !PLAYER_URLS.containsKey(player.getName()))
-                .collect(Collectors.toList())
-                .isEmpty()) {
-            return;
-        }
-
         String content = httpClient.get(BASE_URL + "/lodestone/freecompany/9229283011365743624/member/");
         Pattern pattern = Pattern.compile("<li class=\"entry\"><a href=\"(.+?)\".+?<p class=\"entry__name\">(.+?)<\\/p>.+?<\\/li>.+?<\\/li>.+?<\\/li>.+?<\\/li>");
         Matcher matcher = pattern.matcher(content);
+        OTHER_PLAYER_NAMES.clear();
 
         while (matcher.find()) {
             String playerUrl = matcher.group(1);
-            String playerName = matcher.group(2);
+            String playerName = matcher.group(2).replace("&#39;", "'");
 
             if(players.stream().anyMatch(player -> player.getName().equals(playerName))) {
                 PLAYER_URLS.put(playerName, playerUrl);
+            } else {
+                OTHER_PLAYER_NAMES.add(playerName);
             }
         }
     }

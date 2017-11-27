@@ -5,7 +5,8 @@ create table mount (
   id int not null auto_increment,
   name varchar(200),
   instance varchar(200),
-  primary key (id)
+  primary key (id),
+  unique (name)
 );
 
 insert into mount (name, instance) values ("Aithon", "Ifrit");
@@ -37,7 +38,8 @@ drop table if exists player;
 create table player (
   id int not null auto_increment,
   name varchar(200),
-  primary key (id)
+  primary key (id),
+  unique (name)
 );
 
 insert into player (name) values ("Ussa Xellus");

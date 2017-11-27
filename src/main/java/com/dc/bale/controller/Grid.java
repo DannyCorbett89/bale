@@ -23,6 +23,14 @@ public class Grid {
                 }
             }
 
+            sb.append("<td>")
+                    .append("<button id=\"")
+                    .append(row[0])
+                    .append("\" onClick=\"removePlayer('")
+                    .append(row[0].replace("'", "\\'"))
+                    .append("')\">Remove</button>")
+                    .append("</td>");
+
             sb.append("</tr>");
         }
         return sb.toString();
