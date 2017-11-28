@@ -37,19 +37,13 @@ insert into mount (name, instance) values ("Legendary Kamuy", "Shinryu");
 drop table if exists player;
 create table player (
   id int not null auto_increment,
-  name varchar(200),
+  name varchar(200) not null,
+  tracking bool not null,
+  url varchar(200) not null,
   primary key (id),
   unique (name)
 );
 
-insert into player (name) values ("Ussa Xellus");
-insert into player (name) values ("Syth Rilletta");
-insert into player (name) values ("Cordia Crius");
-insert into player (name) values ("Alveille Tekada");
-insert into player (name) values ("Scullai Ponga");
-insert into player (name) values ("Lelouch Vi");
-insert into player (name) values ("Jazrail Paraxoi");
-insert into player (name) values ("Neos Darkbright");
 
 drop table if exists mount_link;
 create table mount_link (
@@ -66,3 +60,5 @@ create table config (
   value varchar(200),
   primary key (id)
 );
+
+insert into config (name, value) values ("freecompany_url", "/lodestone/freecompany/9229283011365743624/member/");

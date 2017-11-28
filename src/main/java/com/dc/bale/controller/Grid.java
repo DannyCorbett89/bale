@@ -48,12 +48,17 @@ public class Grid {
     public int numColumnsWithValue() {
         int numColumnsWithValue = 0;
         for (String[] row : data) {
+            int rowColumnsWithValue = 0;
             for (int y = 1; y < row.length; y++) {
                 if (!columnIsEmpty(y)) {
-                    numColumnsWithValue++;
+                    rowColumnsWithValue++;
                 }
             }
+            if(rowColumnsWithValue > numColumnsWithValue) {
+                numColumnsWithValue = rowColumnsWithValue;
+            }
         }
-        return numColumnsWithValue;
+        
+        return numColumnsWithValue + 1;
     }
 }

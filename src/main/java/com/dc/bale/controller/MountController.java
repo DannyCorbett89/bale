@@ -1,25 +1,22 @@
 package com.dc.bale.controller;
 
 import com.dc.bale.component.HttpClient;
-import com.dc.bale.database.Mount;
-import com.dc.bale.database.MountRepository;
-import com.dc.bale.database.Player;
-import com.dc.bale.database.PlayerRepository;
+import com.dc.bale.database.*;
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
-import org.apache.http.NameValuePair;
-import org.apache.http.client.utils.URLEncodedUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.io.IOException;
-import java.nio.charset.Charset;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.regex.Matcher;
@@ -32,13 +29,12 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor(onConstructor = @__(@Autowired))
 public class MountController {
     private static final String BASE_URL = "https://na.finalfantasyxiv.com";
-    private static final Map<String, String> PLAYER_URLS = new HashMap<>();
-    private static final List<String> OTHER_PLAYER_NAMES = new ArrayList<>();
     private static final Map<String, List<Mount>> PLAYER_MOUNTS = new HashMap<>();
 
     @NonNull private HttpClient httpClient;
     @NonNull private MountRepository mountRepository;
     @NonNull private PlayerRepository playerRepository;
+    @NonNull private ConfigRepository configRepository;
     private String lastUpdated = "Never";
 
     @RequestMapping(method = RequestMethod.GET, produces = {MediaType.TEXT_HTML_VALUE})
@@ -95,21 +91,20 @@ public class MountController {
         }
 
         StringBuilder sb = new StringBuilder();
-        OTHER_PLAYER_NAMES.forEach(s -> sb
-                .append("<option value=\"")
-                .append(s)
-                .append("\">")
-                .append(s)
-                .append("</option>\n"));
+        playerRepository.findByTrackingFalse().forEach(
+            player -> sb
+                    .append("<option value=\"")
+                    .append(player.getId())
+                    .append("\">")
+                    .append(player.getName())
+                    .append("</option>\n")
+        );
 
-        return "<html><head><style>" +
-                "table {border-collapse: collapse; border-style: solid;} " +
-                "td, th {padding: 10px;} " +
-                "td, th, p {font-family: helvetica; font-size: 14px;}" +
-                "</style>" +
+        return "<html><head>" +
                 "<link rel=\"stylesheet\" href=\"https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css\">\n" +
                 "<script src=\"https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js\"></script>\n" +
                 "<script src=\"https://code.jquery.com/ui/1.12.1/jquery-ui.js\"></script>\n" +
+                "<link rel=\"stylesheet\" href=\"resources/bale.css\">\n" +
                 "<script src=\"resources/bale.js\"></script>" +
                 "</head><body>" +
                 "<table border=\"1\"><tr><th>Name</th><th colspan=\"" + grid.numColumnsWithValue() +
@@ -119,7 +114,7 @@ public class MountController {
                 "<p>Last Updated: " + lastUpdated + "</p>" +
                 "<input type=\"button\" id=\"newPlayerButton\" value=\"Add Player\"/>" +
                 "<div id=\"newPlayerList\" title=\"Add Player\">\n" +
-                "<select name=\"player\">\n" +
+                "<select name=\"playerId\">\n" +
                 sb.toString() +
                 "</select>\n" +
                 "</div>" +
@@ -142,24 +137,17 @@ public class MountController {
         return mapper.writeValueAsString(result);
     }
 
-    @RequestMapping(value = "/addPlayer", method = RequestMethod.POST, produces = {MediaType.APPLICATION_JSON_VALUE})
-    public String addPlayer(@RequestBody(required = false) String body) throws IOException {
+    @RequestMapping(value = "/addPlayer", method = RequestMethod.GET, produces = {MediaType.APPLICATION_JSON_VALUE})
+    public String addPlayer(@RequestParam("playerId") long playerId) throws IOException {
         try {
-            String playerName = URLEncodedUtils.parse(body, Charset.defaultCharset()).stream()
-                    .filter(nameValuePair -> nameValuePair.getName().equals("player"))
-                    .map(NameValuePair::getValue)
-                    .findFirst()
-                    .orElse(null);
-            Player player = Player.builder()
-                    .name(playerName)
-                    .mounts(new ArrayList<>())
-                    .build();
+            Player player = playerRepository.findOne(playerId);
+            player.setTracking(true);
             playerRepository.save(player);
             loadMounts();
-            OTHER_PLAYER_NAMES.remove(playerName);
+            // TODO: Response class for this
             return "{\"status\":\"success\"}";
         } catch (Exception e) {
-            return "{\"status\":\"error\"}";
+            return "{\"status\":\"error\", \"message\":\"" + e.getLocalizedMessage() + "\"}";
         }
     }
 
@@ -168,54 +156,35 @@ public class MountController {
         try {
             Player player = playerRepository.findByName(playerName);
 
-            if(player != null) {
-                playerRepository.delete(player);
+            if (player != null) {
+                player.setTracking(false);
+                playerRepository.save(player);
                 loadMounts();
                 return "{\"status\":\"success\"}";
+            } else {
+                return "{\"status\":\"error\", \"message\":\"Player not found: " + playerName + "\"}";
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            return "{\"status\":\"error\", \"message\":\"" + e.getLocalizedMessage() + "\"}";
         }
-        return "{\"status\":\"error\"}";
     }
 
     @Scheduled(fixedRate = 3600000)
     public void loadMounts() throws IOException {
         Map<String, Mount> totalMounts = mountRepository.findAll().stream()
                 .collect(Collectors.toMap(Mount::getName, mount -> mount));
-        List<Player> players = playerRepository.findAll();
 
-        loadPlayerUrls(players);
-
-        // Load all the mounts for each player from the lodestone
-        Map<Player, MountLoader> loaders = players.stream()
-                .collect(Collectors.toMap(player -> player, player -> {
-                    MountLoader mountLoader = new MountLoader(player, totalMounts);
-                    mountLoader.start();
-                    return mountLoader;
-                }));
-
-        // Wait for all loaders to finish processing
-        loaders.values().forEach(mountLoader -> {
-            try {
-                mountLoader.join();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        });
-
-        // Get the list of all mounts that each player has
-        Map<String, List<Mount>> mountsFromWebsite = loaders.entrySet().stream()
-                .collect(Collectors.toMap(entry -> entry.getKey().getName(), entry -> entry.getKey().getMounts()));
-
+        // Get the list of all mounts that each player has, either from database or website
+        List<Player> players = loadPlayerData(totalMounts);
+        
         // Convert it to a list of mounts that each player does not
         // have from the list of total mounts
         PLAYER_MOUNTS.clear();
-        PLAYER_MOUNTS.putAll(mountsFromWebsite.entrySet().stream()
-                .collect(Collectors.toMap(Map.Entry::getKey, entry -> totalMounts
+        PLAYER_MOUNTS.putAll(players.stream()
+                .collect(Collectors.toMap(Player::getName, player -> totalMounts
                         .values()
                         .stream()
-                        .filter(mount -> !entry.getValue().contains(mount))
+                        .filter(mount -> !player.getMounts().contains(mount))
                         .collect(Collectors.toList()))));
 
         SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm");
@@ -239,7 +208,7 @@ public class MountController {
                 return;
             }
 
-            String url = BASE_URL + PLAYER_URLS.get(player.getName());
+            String url = BASE_URL + player.getUrl();
             try {
                 String content = httpClient.get(url);
                 Pattern pattern = Pattern.compile("<li><div class=\"character__item_icon.+?data-tooltip=\"(.+?)\".+?</li>");
@@ -263,21 +232,50 @@ public class MountController {
         }
     }
 
-    private void loadPlayerUrls(List<Player> players) throws IOException {
-        String content = httpClient.get(BASE_URL + "/lodestone/freecompany/9229283011365743624/member/");
+    private List<Player> loadPlayerData(Map<String, Mount> totalMounts) throws IOException {
+        Config freeCompanyUrl = configRepository.findByName("freeCompanyUrl");
+        String content = httpClient.get(BASE_URL + freeCompanyUrl.getValue());
         Pattern pattern = Pattern.compile("<li class=\"entry\"><a href=\"(.+?)\".+?<p class=\"entry__name\">(.+?)<\\/p>.+?<\\/li>.+?<\\/li>.+?<\\/li>.+?<\\/li>");
         Matcher matcher = pattern.matcher(content);
-        OTHER_PLAYER_NAMES.clear();
+
+        Map<String, Player> players = playerRepository.findAll().stream()
+                .collect(Collectors.toMap(Player::getName, player -> player));
+
+        // Load all the mounts for each player from the lodestone
+        Map<Player, MountLoader> loaders = new HashMap<>();
 
         while (matcher.find()) {
             String playerUrl = matcher.group(1);
             String playerName = matcher.group(2).replace("&#39;", "'");
+            Player player;
 
-            if(players.stream().anyMatch(player -> player.getName().equals(playerName))) {
-                PLAYER_URLS.put(playerName, playerUrl);
+            if(players.containsKey(playerName)) {
+                player = players.get(playerName);
             } else {
-                OTHER_PLAYER_NAMES.add(playerName);
+                player = playerRepository.save(Player.builder()
+                        .name(playerName)
+                        .url(playerUrl)
+                        .build());
+            }
+
+            if(player.isTracking()) {
+                MountLoader mountLoader = new MountLoader(player, totalMounts);
+                mountLoader.start();
+                loaders.put(player, mountLoader);
             }
         }
+
+        // Wait for all loaders to finish processing
+        loaders.values().forEach(mountLoader -> {
+            try {
+                mountLoader.join();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        });
+
+        return players.values().stream()
+                .filter(Player::isTracking)
+                .collect(Collectors.toList());
     }
 }

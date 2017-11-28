@@ -19,6 +19,8 @@ public class Player {
     @GeneratedValue(strategy = GenerationType.AUTO)
     private long id;
     private String name;
+    private boolean tracking;
+    private String url;
 
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(name = "mount_link",
