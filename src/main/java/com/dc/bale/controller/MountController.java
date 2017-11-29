@@ -240,36 +240,61 @@ public class MountController {
         }
     }
 
+    private int getNumPages(String content) {
+        Pattern pattern = Pattern.compile("<div class=\"parts__total\">([0-9]+) Total</div>");
+        Matcher matcher = pattern.matcher(content);
+
+        if(matcher.find()) {
+            int numMembers = Integer.parseInt(matcher.group(1));
+            int numPages = numMembers / 50;
+            
+            if (numMembers % 50 != 0) {
+                numPages++;
+            }
+
+            return numPages;
+        }
+
+        return 1;
+    }
+
     private List<Player> loadPlayerData(Map<String, Mount> totalMounts) throws IOException {
         Config freeCompanyUrl = configRepository.findByName("freeCompanyUrl");
         String content = httpClient.get(BASE_URL + freeCompanyUrl.getValue());
-        Pattern pattern = Pattern.compile("<li class=\"entry\"><a href=\"(.+?)\".+?<p class=\"entry__name\">(.+?)<\\/p>.+?<\\/li>.+?<\\/li>.+?<\\/li>.+?<\\/li>");
-        Matcher matcher = pattern.matcher(content);
-
+        
         Map<String, Player> players = playerRepository.findAll().stream()
                 .collect(Collectors.toMap(Player::getName, player -> player));
-
-        // Load all the mounts for each player from the lodestone
         Map<Player, MountLoader> loaders = new HashMap<>();
+        int numPages = getNumPages(content);
 
-        while (matcher.find()) {
-            String playerUrl = matcher.group(1);
-            String playerName = matcher.group(2).replace("&#39;", "'");
-            Player player;
-
-            if(players.containsKey(playerName)) {
-                player = players.get(playerName);
-            } else {
-                player = playerRepository.save(Player.builder()
-                        .name(playerName)
-                        .url(playerUrl)
-                        .build());
+        for(int x = 1; x <= numPages; x++) {
+            // First page is already loaded, don't load it again
+            if(x > 1) {
+                content = httpClient.get(BASE_URL + freeCompanyUrl.getValue() + "?page=" + x);
             }
+            Pattern pattern = Pattern.compile("<li class=\"entry\"><a href=\"(.+?)\".+?<p class=\"entry__name\">(.+?)<\\/p>.+?<\\/li>.+?<\\/li>.+?<\\/li>");
+            Matcher matcher = pattern.matcher(content);
 
-            if(player.isTracking()) {
-                MountLoader mountLoader = new MountLoader(player, totalMounts);
-                mountLoader.start();
-                loaders.put(player, mountLoader);
+            // Load all the mounts for each player from the lodestone
+            while (matcher.find()) {
+                String playerUrl = matcher.group(1);
+                String playerName = matcher.group(2).replace("&#39;", "'");
+                Player player;
+
+                if(players.containsKey(playerName)) {
+                    player = players.get(playerName);
+                } else {
+                    player = playerRepository.save(Player.builder()
+                            .name(playerName)
+                            .url(playerUrl)
+                            .build());
+                }
+
+                if(player.isTracking()) {
+                    MountLoader mountLoader = new MountLoader(player, totalMounts);
+                    mountLoader.start();
+                    loaders.put(player, mountLoader);
+                }
             }
         }
 
