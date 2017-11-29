@@ -1,11 +1,8 @@
 package com.dc.bale.controller;
 
 import com.dc.bale.component.HttpClient;
+import com.dc.bale.component.JsonConverter;
 import com.dc.bale.database.*;
-import com.fasterxml.jackson.annotation.JsonAutoDetect;
-import com.fasterxml.jackson.annotation.PropertyAccessor;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,6 +29,7 @@ public class MountController {
     private static final Map<String, List<Mount>> PLAYER_MOUNTS = new HashMap<>();
 
     @NonNull private HttpClient httpClient;
+    @NonNull private JsonConverter jsonConverter;
     @NonNull private MountRepository mountRepository;
     @NonNull private PlayerRepository playerRepository;
     @NonNull private ConfigRepository configRepository;
@@ -131,23 +129,25 @@ public class MountController {
         result.put("mounts", PLAYER_MOUNTS);
         result.put("lastUpdated", lastUpdated);
 
-        ObjectMapper mapper = new ObjectMapper();
-        mapper.enable(SerializationFeature.INDENT_OUTPUT);
-        mapper.setVisibility(PropertyAccessor.FIELD, JsonAutoDetect.Visibility.ANY);
-        return mapper.writeValueAsString(result);
+        return jsonConverter.toString(result);
     }
 
     @RequestMapping(value = "/addPlayer", method = RequestMethod.GET, produces = {MediaType.APPLICATION_JSON_VALUE})
     public String addPlayer(@RequestParam("playerId") long playerId) throws IOException {
         try {
+            Map<String, Mount> totalMounts = mountRepository.findAll().stream()
+                    .collect(Collectors.toMap(Mount::getName, mount -> mount));
+
             Player player = playerRepository.findOne(playerId);
             player.setTracking(true);
-            playerRepository.save(player);
-            loadMounts();
-            // TODO: Response class for this
-            return "{\"status\":\"success\"}";
+            player = playerRepository.save(player);
+            loadMounts(player, totalMounts);
+
+            PLAYER_MOUNTS.put(player.getName(), getMissingMounts(player, totalMounts));
+            
+            return jsonConverter.toString(StatusResponse.success());
         } catch (Exception e) {
-            return "{\"status\":\"error\", \"message\":\"" + e.getLocalizedMessage() + "\"}";
+            return jsonConverter.toString(StatusResponse.error(e.getLocalizedMessage()));
         }
     }
 
@@ -159,13 +159,13 @@ public class MountController {
             if (player != null) {
                 player.setTracking(false);
                 playerRepository.save(player);
-                loadMounts();
-                return "{\"status\":\"success\"}";
+                PLAYER_MOUNTS.remove(player.getName());
+                return jsonConverter.toString(StatusResponse.success());
             } else {
-                return "{\"status\":\"error\", \"message\":\"Player not found: " + playerName + "\"}";
+                return jsonConverter.toString(StatusResponse.error("Player not found: " + playerName));
             }
         } catch (Exception e) {
-            return "{\"status\":\"error\", \"message\":\"" + e.getLocalizedMessage() + "\"}";
+            return jsonConverter.toString(StatusResponse.error(e.getLocalizedMessage()));
         }
     }
 
@@ -181,14 +181,22 @@ public class MountController {
         // have from the list of total mounts
         PLAYER_MOUNTS.clear();
         PLAYER_MOUNTS.putAll(players.stream()
-                .collect(Collectors.toMap(Player::getName, player -> totalMounts
-                        .values()
-                        .stream()
-                        .filter(mount -> !player.getMounts().contains(mount))
-                        .collect(Collectors.toList()))));
+                .collect(Collectors.toMap(Player::getName, player -> getMissingMounts(player, totalMounts))));
 
         SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm");
         lastUpdated = sdf.format(new Date());
+    }
+
+    private void loadMounts(Player player, Map<String, Mount> totalMounts) {
+        new MountLoader(player, totalMounts).run();
+    }
+
+    private List<Mount> getMissingMounts(Player player, Map<String, Mount> totalMounts) {
+        return totalMounts
+                .values()
+                .stream()
+                .filter(mount -> !player.getMounts().contains(mount))
+                .collect(Collectors.toList());
     }
 
     public class MountLoader extends Thread {
