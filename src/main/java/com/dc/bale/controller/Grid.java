@@ -14,7 +14,7 @@ public class Grid {
     public String toHTML() {
         StringBuilder sb = new StringBuilder();
         for (String[] row : data) {
-            sb.append("<tr><td>").append(row[0]).append("</td>");
+            sb.append("<tr class=\"highlight\"><td>").append(row[0]).append("</td>");
 
             for (int y = 1; y < row.length; y++) {
                 if (!columnIsEmpty(y)) {

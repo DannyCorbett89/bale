@@ -11,3 +11,11 @@ td, th, p {
     font-family: helvetica;
     font-size: 14px;
 }
+
+tr.highlight {
+    background-color: white;
+}
+
+tr.highlight:hover {
+    background-color: #fffcaa;
+}
