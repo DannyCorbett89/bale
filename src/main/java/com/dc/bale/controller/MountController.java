@@ -104,6 +104,7 @@ public class MountController {
                 "<script src=\"https://code.jquery.com/ui/1.12.1/jquery-ui.js\"></script>\n" +
                 "<link rel=\"stylesheet\" href=\"resources/bale.css\">\n" +
                 "<script src=\"resources/bale.js\"></script>" +
+                "<title>BaLe - Mounts Needed</title>" +
                 "</head><body>" +
                 "<table border=\"1\"><tr><th>Name</th><th colspan=\"" + grid.numColumnsWithValue() +
                 "\">Mounts needed</th></tr>" +

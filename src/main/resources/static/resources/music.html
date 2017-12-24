@@ -1,0 +1,28 @@
+<html>
+    <head>
+        <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+        <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+        <link rel="stylesheet" href="resources/bale.css">
+        <script src="resources/bale.js"></script>
+        <title>BaLe - Bard Music converter</title>
+    </head>
+    <body>
+        <p>Convert music notes (F+1, F, F-1 etc) into hotbar shortcuts (6, c6, ca6 etc)</p>
+        <p>c = Ctrl</p>
+        <p>a = Alt</p>
+        <form action="/music" method="POST">
+            <p>Music:</p>
+            <table border="0">
+                <tr>
+                    <td valign="top">
+                        <textarea name="musicNotes" rows="20" cols="50">${ORIGINAL}</textarea>
+                        <br>
+                        <input type="submit" value="Convert"/>
+                    </td>
+                    <td valign="top">${RESULTS}</td>
+                </tr>
+            </table>
+        </form>
+    </body>
+</html>
