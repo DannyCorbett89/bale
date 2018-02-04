@@ -14,7 +14,7 @@ public class FormData {
     private String musicNotes;
 
     public String getConvertedMusicNotes(MusicKeyMapping mappings) {
-        StringBuffer sb = new StringBuffer();
+        StringBuilder sb = new StringBuilder();
 
         String[] notes = musicNotes
                 .replace("\r\n", " \r\n ")
@@ -27,17 +27,22 @@ public class FormData {
                 continue;
             } else if(note.replace(" ", "").equals("")) {
                 continue;
-            } else if(note.contains("+1")) {
+            } else if(note.endsWith("+1")) {
                 note = note.replace("+1", "");
-                sb.append(mappings.getOctave_up() + "+");
-            } else if(note.contains("-1")) {
+                sb.append(mappings.getOctave_up())
+                        .append("+");
+            } else if(note.endsWith("-1")) {
                 note = note.replace("-1", "");
-                sb.append(mappings.getOctave_down() + "+");
-            } else if(note.contains("+")) {
+                sb.append(mappings.getOctave_down())
+                        .append("+");
+            } else if(note.endsWith("+") && !note.equals("+")) {
                 note = note.replace("+", "");
-            } else if(note.contains("-")) {
+                sb.append(mappings.getOctave_up())
+                        .append("+");
+            } else if(note.endsWith("-") && !note.equals("-")) {
                 note = note.replace("-", "");
-                sb.append("ca");
+                sb.append(mappings.getOctave_down())
+                        .append("+");
             }
 
             switch (note) {

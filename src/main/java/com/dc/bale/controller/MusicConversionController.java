@@ -29,9 +29,11 @@ public class MusicConversionController {
 
     @RequestMapping(method = RequestMethod.POST, consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE, produces = {MediaType.TEXT_HTML_VALUE})
     public String convert(FormData body) throws IOException {
-        MusicKeyMapping mappings = keyMappingRepository.findByName(body.getMapping());
+        String mapping = body.getMapping();
+        MusicKeyMapping mappings = keyMappingRepository.findByName(mapping);
         String rawHtml = loadHtml();
-        return rawHtml.replace("${ORIGINAL}", body.getMusicNotes())
+        return rawHtml.replace("\"" + mapping + "\"", "\"" + mapping + "\" selected")
+                .replace("${ORIGINAL}", body.getMusicNotes())
                 .replace("${RESULTS}", "<pre>" + body.getConvertedMusicNotes(mappings) + "</pre>");
     }
 
