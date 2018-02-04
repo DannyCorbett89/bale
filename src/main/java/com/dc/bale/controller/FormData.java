@@ -1,5 +1,6 @@
 package com.dc.bale.controller;
 
+import com.dc.bale.database.MusicKeyMapping;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -8,9 +9,11 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class FormData {
+
+    private String mapping;
     private String musicNotes;
 
-    public String getConvertedMusicNotes() {
+    public String getConvertedMusicNotes(MusicKeyMapping mappings) {
         StringBuffer sb = new StringBuffer();
 
         String[] notes = musicNotes
@@ -26,60 +29,59 @@ public class FormData {
                 continue;
             } else if(note.contains("+1")) {
                 note = note.replace("+1", "");
+                sb.append(mappings.getOctave_up() + "+");
             } else if(note.contains("-1")) {
                 note = note.replace("-1", "");
-                sb.append("ca");
+                sb.append(mappings.getOctave_down() + "+");
             } else if(note.contains("+")) {
                 note = note.replace("+", "");
             } else if(note.contains("-")) {
                 note = note.replace("-", "");
                 sb.append("ca");
-            } else {
-                sb.append("c");
             }
 
             switch (note) {
                 case "B♭":
-                    sb.append("-");
+                    sb.append(mappings.getB_flat());
                     break;
                 case "Bb":
-                    sb.append("-");
+                    sb.append(mappings.getB_flat());
                     break;
                 case "B":
-                    sb.append("=");
+                    sb.append(mappings.getB());
                     break;
                 case "A":
-                    sb.append("0");
+                    sb.append(mappings.getA());
                     break;
                 case "G#":
-                    sb.append("9");
+                    sb.append(mappings.getG_sharp());
                     break;
                 case "G":
-                    sb.append("8");
+                    sb.append(mappings.getG());
                     break;
                 case "F#":
-                    sb.append("7");
+                    sb.append(mappings.getF_sharp());
                     break;
                 case "F":
-                    sb.append("6");
+                    sb.append(mappings.getF());
                     break;
                 case "E♭":
-                    sb.append("4");
+                    sb.append(mappings.getE_flat());
                     break;
                 case "Eb":
-                    sb.append("4");
+                    sb.append(mappings.getE_flat());
                     break;
                 case "E":
-                    sb.append("5");
+                    sb.append(mappings.getE());
                     break;
                 case "D":
-                    sb.append("3");
+                    sb.append(mappings.getD());
                     break;
                 case "C#":
-                    sb.append("2");
+                    sb.append(mappings.getC_sharp());
                     break;
                 case "C":
-                    sb.append("1");
+                    sb.append(mappings.getC());
                     break;
                 default:
                     sb.append("<font color=\"FF0000\">");
@@ -91,50 +93,5 @@ public class FormData {
         }
 
         return sb.toString();
-//        return musicNotes.replace("\r\n", "<br>")
-//                .replace("B♭+1", "-")
-//                .replace("Bb+1", "-")
-//                .replace("B+1", "=")
-//                .replace("A+1", "0")
-//                .replace("G#+1", "9")
-//                .replace("G+1", "8")
-//                .replace("F#+1", "7")
-//                .replace("F+1", "6")
-//                .replace("E♭+1", "4")
-//                .replace("Eb+1", "4")
-//                .replace("E+1", "5")
-//                .replace("D+1", "3")
-//                .replace("C#+1", "2")
-//                .replace("C+1", "1")
-//
-//                .replace("B♭-1", "ca-")
-//                .replace("Bb-1", "ca-")
-//                .replace("B-1", "ca=")
-//                .replace("A-1", "ca0")
-//                .replace("G#-1", "ca9")
-//                .replace("G-1", "ca8")
-//                .replace("F#-1", "ca7")
-//                .replace("F-1", "ca6")
-//                .replace("E♭-1", "ca4")
-//                .replace("Eb-1", "ca4")
-//                .replace("E-1", "ca5")
-//                .replace("D-1", "ca3")
-//                .replace("C#-1", "ca2")
-//                .replace("C-1", "ca1")
-//
-//                .replace("B♭", "c-")
-//                .replace("Bb", "c-")
-//                .replace("B", "c=")
-//                .replace("A", "c0")
-//                .replace("G#", "c9")
-//                .replace("G", "c8")
-//                .replace("F#", "c7")
-//                .replace("F", "c6")
-//                .replace("E♭", "c4")
-//                .replace("Eb", "c4")
-//                .replace("E", "c5")
-//                .replace("D", "c3")
-//                .replace("C#", "c2")
-//                .replace("C", "c1");
     }
 }

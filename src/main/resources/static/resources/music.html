@@ -8,10 +8,15 @@
         <title>BaLe - Bard Music converter</title>
     </head>
     <body>
-        <p>Convert music notes (F+1, F, F-1 etc) into hotbar shortcuts (6, c6, ca6 etc)</p>
-        <p>c = Ctrl</p>
-        <p>a = Alt</p>
+        <p>Convert music notes (F+1, F, F-1 etc) into hotbar shortcuts (SHIFT+R, R, CTRL+R etc)</p>
         <form action="/music" method="POST">
+            <p>Mapping:
+                <select name="mapping">
+                    <option value="Default Controller">Default Controller</option>
+                    <option value="Default Keyboard">Default Keyboard</option>
+                </select>
+                <!-- TODO: Store previously selected option in a cookie -->
+            </p>
             <p>Music:</p>
             <table border="0">
                 <tr>
