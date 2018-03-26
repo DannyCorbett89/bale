@@ -39,6 +39,14 @@ public class MusicConversionController {
 
     private String loadHtml() throws IOException {
         InputStream resource = getClass().getClassLoader().getResourceAsStream("static/resources/music.html");
-        return IOUtils.toString(resource);
+        StringBuilder sb = new StringBuilder();
+        keyMappingRepository.findAll()
+                .forEach(musicKeyMapping -> sb.append("<option value=\"")
+                        .append(musicKeyMapping.getName())
+                        .append("\">")
+                        .append(musicKeyMapping.getName())
+                        .append("</option>"));
+        return IOUtils.toString(resource)
+                .replace("{OPTIONS}", sb.toString());
     }
 }
