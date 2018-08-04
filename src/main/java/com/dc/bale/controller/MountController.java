@@ -7,6 +7,7 @@ import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -121,7 +122,7 @@ public class MountController {
     }
 
     @RequestMapping(value = "/json", method = RequestMethod.GET, produces = {MediaType.APPLICATION_JSON_VALUE})
-    public String listMountsJSON(@RequestParam(value = "refresh", required = false) String refresh) throws IOException {
+    public ResponseEntity<String> listMountsJSON(@RequestParam(value = "refresh", required = false) String refresh) throws IOException {
         if(refresh != null && refresh.equals("true")) {
             loadMounts();
         }
@@ -130,7 +131,9 @@ public class MountController {
         result.put("mounts", PLAYER_MOUNTS);
         result.put("lastUpdated", lastUpdated);
 
-        return jsonConverter.toString(result);
+        return ResponseEntity.ok()
+                .header("Access-Control-Allow-Origin", "*")
+                .body(jsonConverter.toString(result));
     }
 
     @RequestMapping(value = "/addPlayer", method = RequestMethod.GET, produces = {MediaType.APPLICATION_JSON_VALUE})

@@ -89,4 +89,4 @@ create table config (
   primary key (id)
 );
 
-insert into config (name, value) values ('freecompany_url', '/lodestone/freecompany/9229283011365743624/member/');
+insert into config (name, value) values ('freeCompanyUrl', '/lodestone/freecompany/9229283011365743624/member/');
