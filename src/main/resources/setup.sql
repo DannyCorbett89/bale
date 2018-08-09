@@ -30,6 +30,8 @@ insert into mount (name, instance) values ('Firebird', 'Firebird');
 insert into mount (name, instance) values ('Reveling Kamuy', 'Susano');
 insert into mount (name, instance) values ('Blissful Kamuy', 'Lakshmi');
 insert into mount (name, instance) values ('Legendary Kamuy', 'Shinryu');
+insert into mount (name, instance) values ('Auspicious Kamuy', 'Byakko');
+insert into mount (name, instance) values ('Lunar Kamuy', 'Tsukuyomi');
 # insert into mount (name, instance) values ('Alte Roite', 'Alte Roite - O4S');
 # insert into mount (name, instance) values ('Ixion', 'Ixion');
 # insert into mount (name, instance) values ('Magitek Predator', 'Magitek Predator - Ala Mhigo');

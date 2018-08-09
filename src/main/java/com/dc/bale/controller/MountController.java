@@ -3,6 +3,9 @@ package com.dc.bale.controller;
 import com.dc.bale.component.HttpClient;
 import com.dc.bale.component.JsonConverter;
 import com.dc.bale.database.*;
+import com.dc.bale.model.MountRS;
+import com.dc.bale.model.PlayerRS;
+import com.dc.bale.model.Response;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,7 +24,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-// TODO: Switch back to /mounts when there is some content for RootController
 @RequestMapping("/")
 @RestController
 @RequiredArgsConstructor(onConstructor = @__(@Autowired))
@@ -29,115 +31,80 @@ public class MountController {
     private static final String BASE_URL = "https://na.finalfantasyxiv.com";
     private static final Map<String, List<Mount>> PLAYER_MOUNTS = new HashMap<>();
 
-    @NonNull private HttpClient httpClient;
-    @NonNull private JsonConverter jsonConverter;
-    @NonNull private MountRepository mountRepository;
-    @NonNull private PlayerRepository playerRepository;
-    @NonNull private ConfigRepository configRepository;
+    @NonNull
+    private HttpClient httpClient;
+    @NonNull
+    private JsonConverter jsonConverter;
+    @NonNull
+    private MountRepository mountRepository;
+    @NonNull
+    private PlayerRepository playerRepository;
+    @NonNull
+    private ConfigRepository configRepository;
+
     private String lastUpdated = "Never";
 
-    @RequestMapping(method = RequestMethod.GET, produces = {MediaType.TEXT_HTML_VALUE})
-    public String listMountsHTML(@RequestParam(value = "refresh", required = false) String refresh,
-                                 @RequestParam(value = "display", required = false) String display) throws IOException {
-        if(refresh != null && refresh.equals("true")) {
-            loadMounts();
-        }
+    @RequestMapping(value = "/players", method = RequestMethod.GET, produces = {MediaType.APPLICATION_JSON_VALUE})
+    public ResponseEntity<String> listPlayers() throws IOException {
+        List<Player> players = playerRepository.findByTrackingFalse();
 
-        SortedSet<Map.Entry<String, List<Mount>>> sortedSet = new TreeSet<>((o1, o2) -> {
-            int size1 = o1.getValue().size();
-            int size2 = o2.getValue().size();
-
-            if(size1 != size2) {
-                return Integer.compare(size2, size1);
-            } else {
-                return o1.getKey().compareTo(o2.getKey());
-            }
-        });
-        sortedSet.addAll(PLAYER_MOUNTS.entrySet());
-        Map<String, Mount> totalMounts = mountRepository.findAll().stream()
-                .collect(Collectors.toMap(Mount::getInstance, mount -> mount));
-
-        int numRows = sortedSet.size();
-        int numColumns = totalMounts.values().stream()
-                .mapToInt(value -> Math.toIntExact(value.getId()))
-                .max()
-                .orElse(0);
-
-        Grid grid = new Grid(numRows, numColumns + 1);
-        int row = 0;
-
-        for (Map.Entry<String, List<Mount>> entry : sortedSet) {
-            String playerName = entry.getKey();
-            List<Mount> mounts = entry.getValue();
-
-            grid.setValue(row, 0, playerName);
-
-            for (Mount mount : mounts) {
-                try {
-                    String value = mount.getInstance();
-
-                    if(display != null && display.equals("mountNames")) {
-                        value += "<br>(" + mount.getName() + ")";
-                    }
-
-                    grid.setValue(row, Math.toIntExact(mount.getId()), value);
-                } catch(Exception e) {
-                    e.printStackTrace();
-                }
-            }
-
-            row++;
-        }
-
-        StringBuilder sb = new StringBuilder();
-        playerRepository.findByTrackingFalse().forEach(
-            player -> sb
-                    .append("<option value=\"")
-                    .append(player.getId())
-                    .append("\">")
-                    .append(player.getName())
-                    .append("</option>\n")
-        );
-
-        return "<html><head>" +
-                "<link rel=\"stylesheet\" href=\"https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css\">\n" +
-                "<script src=\"https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js\"></script>\n" +
-                "<script src=\"https://code.jquery.com/ui/1.12.1/jquery-ui.js\"></script>\n" +
-                "<link rel=\"stylesheet\" href=\"resources/bale.css\">\n" +
-                "<script src=\"resources/bale.js\"></script>" +
-                "<title>BaLe - Mounts Needed</title>" +
-                "</head><body>" +
-                "<table border=\"1\"><tr><th>Name</th><th colspan=\"" + grid.numColumnsWithValue() +
-                "\">Mounts needed</th></tr>" +
-                grid.toHTML() +
-                "</table>" +
-                "<p>Last Updated: " + lastUpdated + "</p>" +
-                "<input type=\"button\" id=\"newPlayerButton\" value=\"Add Player\"/>" +
-                "<div id=\"newPlayerList\" title=\"Add Player\">\n" +
-                "<select name=\"playerId\">\n" +
-                sb.toString() +
-                "</select>\n" +
-                "</div>" +
-                "</body></html>";
+        return ResponseEntity.ok()
+                .header("Access-Control-Allow-Origin", "*")
+                .body(jsonConverter.toString(players));
     }
 
     @RequestMapping(value = "/json", method = RequestMethod.GET, produces = {MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<String> listMountsJSON(@RequestParam(value = "refresh", required = false) String refresh) throws IOException {
-        if(refresh != null && refresh.equals("true")) {
+        if (refresh != null && refresh.equals("true")) {
             loadMounts();
         }
 
-        Map<String, Object> result = new HashMap<>();
-        result.put("mounts", PLAYER_MOUNTS);
-        result.put("lastUpdated", lastUpdated);
+        Response response = Response.builder()
+                .lastUpdated(lastUpdated)
+                .players(PLAYER_MOUNTS.entrySet().stream().map(stringListEntry -> PlayerRS.builder()
+                        .name(stringListEntry.getKey())
+                        .mounts(stringListEntry.getValue().stream().map(mount -> MountRS.builder()
+                                .id(mount.getId())
+                                .name(mount.getName())
+                                .instance(mount.getInstance())
+                                .build()).collect(Collectors.toList()))
+                        .build()).collect(Collectors.toList()))
+                .build();
+
+        List<PlayerRS> players = response.getPlayers();
+
+        for (PlayerRS player : players) {
+            for (int i = player.getMounts().size() - 1; i >= 0; i--) {
+                MountRS mount = player.getMounts().get(i);
+                if (!anyPlayerHasMount(players, mount)) {
+                    player.getMounts().remove(i);
+                }
+            }
+        }
+
+        players.sort((o1, o2) -> Long.compare(o2.numMounts(), o1.numMounts()));
+        players.forEach(player -> player.getMounts().sort(Comparator.comparingLong(MountRS::getId)));
 
         return ResponseEntity.ok()
                 .header("Access-Control-Allow-Origin", "*")
-                .body(jsonConverter.toString(result));
+                .body(jsonConverter.toString(response));
+    }
+
+    private boolean anyPlayerHasMount(List<PlayerRS> players, MountRS mount) {
+        for (PlayerRS player : players) {
+            for (MountRS mountRS : player.getMounts()) {
+                if (mountRS.getId() == mount.getId() && mountRS.getName() != null && mountRS.getInstance() != null) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     @RequestMapping(value = "/addPlayer", method = RequestMethod.GET, produces = {MediaType.APPLICATION_JSON_VALUE})
-    public String addPlayer(@RequestParam("playerId") long playerId) throws IOException {
+    public ResponseEntity<String> addPlayer(@RequestParam("playerId") long playerId) throws IOException {
+        String response;
         try {
             Map<String, Mount> totalMounts = mountRepository.findAll().stream()
                     .collect(Collectors.toMap(Mount::getName, mount -> mount));
@@ -148,15 +115,19 @@ public class MountController {
             loadMounts(player, totalMounts);
 
             PLAYER_MOUNTS.put(player.getName(), getMissingMounts(player, totalMounts));
-            
-            return jsonConverter.toString(StatusResponse.success());
+
+            response = jsonConverter.toString(StatusResponse.success());
         } catch (Exception e) {
-            return jsonConverter.toString(StatusResponse.error(e.getLocalizedMessage()));
+            response = jsonConverter.toString(StatusResponse.error(e.getLocalizedMessage()));
         }
+        return ResponseEntity.ok()
+                .header("Access-Control-Allow-Origin", "*")
+                .body(jsonConverter.toString(response));
     }
 
     @RequestMapping(value = "/removePlayer", method = RequestMethod.GET, produces = {MediaType.APPLICATION_JSON_VALUE})
-    public String removePlayer(@RequestParam(value = "playerName") String playerName) throws IOException {
+    public ResponseEntity<String> removePlayer(@RequestParam(value = "playerName") String playerName) throws IOException {
+        String response;
         try {
             Player player = playerRepository.findByName(playerName);
 
@@ -164,13 +135,16 @@ public class MountController {
                 player.setTracking(false);
                 playerRepository.save(player);
                 PLAYER_MOUNTS.remove(player.getName());
-                return jsonConverter.toString(StatusResponse.success());
+                response = jsonConverter.toString(StatusResponse.success());
             } else {
-                return jsonConverter.toString(StatusResponse.error("Player not found: " + playerName));
+                response = jsonConverter.toString(StatusResponse.error("Player not found: " + playerName));
             }
         } catch (Exception e) {
-            return jsonConverter.toString(StatusResponse.error(e.getLocalizedMessage()));
+            response = jsonConverter.toString(StatusResponse.error(e.getLocalizedMessage()));
         }
+        return ResponseEntity.ok()
+                .header("Access-Control-Allow-Origin", "*")
+                .body(jsonConverter.toString(response));
     }
 
     @Scheduled(fixedRate = 3600000)
@@ -180,7 +154,7 @@ public class MountController {
 
         // Get the list of all mounts that each player has, either from database or website
         List<Player> players = loadPlayerData(totalMounts);
-        
+
         // Convert it to a list of mounts that each player does not
         // have from the list of total mounts
         PLAYER_MOUNTS.clear();
@@ -196,10 +170,8 @@ public class MountController {
     }
 
     private List<Mount> getMissingMounts(Player player, Map<String, Mount> totalMounts) {
-        return totalMounts
-                .values()
-                .stream()
-                .filter(mount -> !player.getMounts().contains(mount))
+        return totalMounts.values().stream()
+                .map(mount -> !player.getMounts().contains(mount) ? mount : Mount.builder().id(mount.getId()).build())
                 .collect(Collectors.toList());
     }
 
@@ -216,7 +188,7 @@ public class MountController {
         public void run() {
             // If all the mounts that we are checking for in totalMounts exist in the player's
             // list of mounts, there will be no point in loading the URL
-            if(totalMounts.values().stream().allMatch(mount -> player.hasMount(mount.getName()))) {
+            if (totalMounts.values().stream().allMatch(mount -> player.hasMount(mount.getName()))) {
                 return;
             }
 
@@ -227,15 +199,15 @@ public class MountController {
                 Matcher matcher = pattern.matcher(content);
                 boolean modified = false;
 
-                while(matcher.find()) {
+                while (matcher.find()) {
                     String mount = matcher.group(1);
 
-                    if(!player.hasMount(mount) && player.addMount(totalMounts.get(mount))) {
+                    if (!player.hasMount(mount) && player.addMount(totalMounts.get(mount))) {
                         modified = true;
                     }
                 }
 
-                if(modified) {
+                if (modified) {
                     playerRepository.save(player);
                 }
             } catch (IOException e) {
@@ -248,10 +220,10 @@ public class MountController {
         Pattern pattern = Pattern.compile("<div class=\"parts__total\">([0-9]+) Total</div>");
         Matcher matcher = pattern.matcher(content);
 
-        if(matcher.find()) {
+        if (matcher.find()) {
             int numMembers = Integer.parseInt(matcher.group(1));
             int numPages = numMembers / 50;
-            
+
             if (numMembers % 50 != 0) {
                 numPages++;
             }
@@ -265,15 +237,15 @@ public class MountController {
     private List<Player> loadPlayerData(Map<String, Mount> totalMounts) throws IOException {
         Config freeCompanyUrl = configRepository.findByName("freeCompanyUrl");
         String content = httpClient.get(BASE_URL + freeCompanyUrl.getValue());
-        
+
         Map<String, Player> players = playerRepository.findAll().stream()
                 .collect(Collectors.toMap(Player::getName, player -> player));
         Map<Player, MountLoader> loaders = new HashMap<>();
         int numPages = getNumPages(content);
 
-        for(int x = 1; x <= numPages; x++) {
+        for (int x = 1; x <= numPages; x++) {
             // First page is already loaded, don't load it again
-            if(x > 1) {
+            if (x > 1) {
                 content = httpClient.get(BASE_URL + freeCompanyUrl.getValue() + "?page=" + x);
             }
             Pattern pattern = Pattern.compile("<li class=\"entry\"><a href=\"(.+?)\".+?<p class=\"entry__name\">(.+?)<\\/p>.+?<\\/li>.+?<\\/li>.+?<\\/li>");
@@ -285,7 +257,7 @@ public class MountController {
                 String playerName = matcher.group(2).replace("&#39;", "'");
                 Player player;
 
-                if(players.containsKey(playerName)) {
+                if (players.containsKey(playerName)) {
                     player = players.get(playerName);
                 } else {
                     player = playerRepository.save(Player.builder()
@@ -294,7 +266,7 @@ public class MountController {
                             .build());
                 }
 
-                if(player.isTracking()) {
+                if (player.isTracking()) {
                     MountLoader mountLoader = new MountLoader(player, totalMounts);
                     mountLoader.start();
                     loaders.put(player, mountLoader);

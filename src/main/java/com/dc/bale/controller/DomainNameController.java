@@ -38,12 +38,12 @@ public class DomainNameController {
     private String lastUpdated = "Never";
 
     @RequestMapping(method = RequestMethod.GET, produces = {MediaType.APPLICATION_JSON_VALUE})
-    public String showLastChanged() throws IOException {
+    public String showLastChanged() {
         return "{\"LastUpdated\": \"" + lastUpdated + "\"}";
     }
 
-        @Scheduled(fixedRate = 3600000)
-    public void hasIPAddressChanged() throws IOException, URISyntaxException {
+    @Scheduled(fixedRate = 3600000)
+    public void hasIPAddressChanged() throws IOException {
         String domain = "bahamutslegion.com";
         HttpGet get = new HttpGet("https://api.godaddy.com/v1/domains/" + domain + "/records/A/@");
         Config key = configRepository.findByName("domainKey");
