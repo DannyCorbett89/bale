@@ -13,7 +13,7 @@ class AddPlayer extends React.Component {
     }
 
     componentWillMount() {
-        fetch('http://localhost:8081/players')
+        fetch('http://www.bahamutslegion.com:8081/players')
             .then(results => {
                 return results.json();
             })
@@ -28,13 +28,6 @@ class AddPlayer extends React.Component {
 
     handleChange(event) {
         this.setState({value: event.target.value});
-    }
-
-    addPlayer() {
-        fetch("http://localhost:8081/addPlayer?playerId=" + this.state.value)
-            .then(() => {
-                window.location.reload();
-            });
     }
 
     render() {
@@ -53,16 +46,44 @@ class AddPlayer extends React.Component {
                             <option key={player.id} value={player.id}>{player.name}</option>
                         )}
                     </select>
+					<br/>
+					<br/>
                     <div className="footer">
-                        <button onClick={() => this.addPlayer()}>
-                            Add
-                        </button>
-                        <button onClick={this.props.onClose}>
-                            Close
-                        </button>
+						<AddButton player={this.state.value}/>
+						&nbsp;
+                        <button onClick={this.props.onClose}>Close</button>
                     </div>
                 </div>
             </div>
+        );
+    }
+}
+
+class AddButton extends React.Component {
+    constructor(props) {
+        super();
+        this.state = {
+            disabled: false,
+            text: "Add"
+        };
+    }
+
+    addPlayer(name) {
+        this.setState({
+            disabled: true,
+            text: "Adding Player..."
+        });
+        fetch("http://www.bahamutslegion.com:8081/addPlayer?playerId=" + this.props.player)
+            .then(() => {
+                window.location.reload();
+            });
+    }
+
+    render() {
+        return (
+            <button id={this.props.player}
+                    onClick={() => this.addPlayer(this.props.player)}
+                    disabled={this.state.disabled}>{this.state.text}</button>
         );
     }
 }
@@ -82,7 +103,7 @@ class RemoveButton extends React.Component {
             disabled: true,
             text: "Removing " + name + "..."
         });
-        fetch("http://localhost:8081/removePlayer?playerName=" + name)
+        fetch("http://www.bahamutslegion.com:8081/removePlayer?playerName=" + name)
             .then(() => {
                 window.location.reload();
             });
@@ -109,7 +130,7 @@ class Mounts extends React.Component {
     }
 
     componentWillMount() {
-        fetch('http://localhost:8081/json')
+        fetch('http://www.bahamutslegion.com:8081/json')
             .then(results => {
                 return results.json();
             })
@@ -121,6 +142,10 @@ class Mounts extends React.Component {
                 });
                 console.log("state", this.state.players);
             })
+    }
+
+    componentDidMount() {
+        document.title = "Bahamut's Legion";
     }
 
     toggleModal = () => {
