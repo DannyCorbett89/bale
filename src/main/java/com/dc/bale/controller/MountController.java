@@ -3,9 +3,9 @@ package com.dc.bale.controller;
 import com.dc.bale.component.HttpClient;
 import com.dc.bale.component.JsonConverter;
 import com.dc.bale.database.*;
-import com.dc.bale.model.MountRS;
 import com.dc.bale.model.PlayerRS;
 import com.dc.bale.model.Response;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -45,16 +45,17 @@ public class MountController {
     private String lastUpdated = "Never";
 
     @RequestMapping(value = "/players", method = RequestMethod.GET, produces = {MediaType.APPLICATION_JSON_VALUE})
-    public ResponseEntity<String> listPlayers() throws IOException {
-        List<Player> players = playerRepository.findByTrackingFalse();
-
-        return ResponseEntity.ok()
-                .header("Access-Control-Allow-Origin", "*")
-                .body(jsonConverter.toString(players));
+    public ResponseEntity<String> listPlayers() {
+        return toResponse(playerRepository.findByTrackingFalse());
     }
 
     @RequestMapping(value = "/json", method = RequestMethod.GET, produces = {MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<String> listMountsJSON(@RequestParam(value = "refresh", required = false) String refresh) throws IOException {
+        return listMounts(refresh);
+    }
+
+    @RequestMapping(value = "/listMounts", method = RequestMethod.GET, produces = {MediaType.APPLICATION_JSON_VALUE})
+    public ResponseEntity<String> listMounts(@RequestParam(value = "refresh", required = false) String refresh) throws IOException {
         if (refresh != null && refresh.equals("true")) {
             loadMounts();
         }
@@ -63,7 +64,7 @@ public class MountController {
                 .lastUpdated(lastUpdated)
                 .players(PLAYER_MOUNTS.entrySet().stream().map(stringListEntry -> PlayerRS.builder()
                         .name(stringListEntry.getKey())
-                        .mounts(stringListEntry.getValue().stream().map(mount -> MountRS.builder()
+                        .mounts(stringListEntry.getValue().stream().map(mount -> Mount.builder()
                                 .id(mount.getId())
                                 .name(mount.getName())
                                 .instance(mount.getInstance())
@@ -75,7 +76,7 @@ public class MountController {
 
         for (PlayerRS player : players) {
             for (int i = player.getMounts().size() - 1; i >= 0; i--) {
-                MountRS mount = player.getMounts().get(i);
+                Mount mount = player.getMounts().get(i);
                 if (!anyPlayerHasMount(players, mount)) {
                     player.getMounts().remove(i);
                 }
@@ -83,16 +84,14 @@ public class MountController {
         }
 
         players.sort((o1, o2) -> Long.compare(o2.numMounts(), o1.numMounts()));
-        players.forEach(player -> player.getMounts().sort(Comparator.comparingLong(MountRS::getId)));
+        players.forEach(player -> player.getMounts().sort(Comparator.comparingLong(Mount::getId)));
 
-        return ResponseEntity.ok()
-                .header("Access-Control-Allow-Origin", "*")
-                .body(jsonConverter.toString(response));
+        return toResponse(response);
     }
 
-    private boolean anyPlayerHasMount(List<PlayerRS> players, MountRS mount) {
+    private boolean anyPlayerHasMount(List<PlayerRS> players, Mount mount) {
         for (PlayerRS player : players) {
-            for (MountRS mountRS : player.getMounts()) {
+            for (Mount mountRS : player.getMounts()) {
                 if (mountRS.getId() == mount.getId() && mountRS.getName() != null && mountRS.getInstance() != null) {
                     return true;
                 }
@@ -103,8 +102,7 @@ public class MountController {
     }
 
     @RequestMapping(value = "/addPlayer", method = RequestMethod.GET, produces = {MediaType.APPLICATION_JSON_VALUE})
-    public ResponseEntity<String> addPlayer(@RequestParam("playerId") long playerId) throws IOException {
-        String response;
+    public ResponseEntity<String> addPlayer(@RequestParam("playerId") long playerId) {
         try {
             Map<String, Mount> totalMounts = mountRepository.findAll().stream()
                     .collect(Collectors.toMap(Mount::getName, mount -> mount));
@@ -116,18 +114,14 @@ public class MountController {
 
             PLAYER_MOUNTS.put(player.getName(), getMissingMounts(player, totalMounts));
 
-            response = jsonConverter.toString(StatusResponse.success());
+            return toResponse(StatusResponse.success());
         } catch (Exception e) {
-            response = jsonConverter.toString(StatusResponse.error(e.getLocalizedMessage()));
+            return toErrorResponse(e.getLocalizedMessage());
         }
-        return ResponseEntity.ok()
-                .header("Access-Control-Allow-Origin", "*")
-                .body(jsonConverter.toString(response));
     }
 
     @RequestMapping(value = "/removePlayer", method = RequestMethod.GET, produces = {MediaType.APPLICATION_JSON_VALUE})
-    public ResponseEntity<String> removePlayer(@RequestParam(value = "playerName") String playerName) throws IOException {
-        String response;
+    public ResponseEntity<String> removePlayer(@RequestParam(value = "playerName") String playerName) {
         try {
             Player player = playerRepository.findByName(playerName);
 
@@ -135,16 +129,55 @@ public class MountController {
                 player.setTracking(false);
                 playerRepository.save(player);
                 PLAYER_MOUNTS.remove(player.getName());
-                response = jsonConverter.toString(StatusResponse.success());
+                return toResponse(StatusResponse.success());
             } else {
-                response = jsonConverter.toString(StatusResponse.error("Player not found: " + playerName));
+                return toErrorResponse("Player not found: " + playerName);
             }
         } catch (Exception e) {
-            response = jsonConverter.toString(StatusResponse.error(e.getLocalizedMessage()));
+            return toErrorResponse(e.getLocalizedMessage());
         }
-        return ResponseEntity.ok()
-                .header("Access-Control-Allow-Origin", "*")
-                .body(jsonConverter.toString(response));
+    }
+
+    @RequestMapping(value = "/addMount", method = RequestMethod.GET, produces = {MediaType.APPLICATION_JSON_VALUE})
+    public ResponseEntity<String> addMount(@RequestParam("name") String name, @RequestParam("instance") String instance) {
+        if (name == null || name.isEmpty()) {
+            return toErrorResponse("Missing required parameter: name");
+        }
+
+        if (instance == null || instance.isEmpty()) {
+            return toErrorResponse("Missing required parameter: instance");
+        }
+
+        if (mountRepository.existsByName(name)) {
+            return toErrorResponse("Mount already exists with name " + name);
+        }
+
+        if (mountRepository.existsByInstance(instance)) {
+            return toErrorResponse("Mount already exists with instance" + instance);
+        }
+
+        Mount mount = Mount.builder()
+                .name(name)
+                .instance(instance)
+                .build();
+        mountRepository.save(mount);
+
+        return toResponse(StatusResponse.success());
+    }
+
+    @RequestMapping(value = "/removeMount", method = RequestMethod.GET, produces = {MediaType.APPLICATION_JSON_VALUE})
+    public ResponseEntity<String> removeMount(@RequestParam("id") long id) {
+        if (id == 0) {
+            return toErrorResponse("Missing required parameter: id");
+        }
+
+        if (!mountRepository.exists(id)) {
+            return toErrorResponse("Mount does not exist, unable to delete");
+        }
+
+        // TODO: Delete links
+        mountRepository.delete(id);
+        return toResponse(StatusResponse.success());
     }
 
     @Scheduled(fixedRate = 3600000)
@@ -173,6 +206,24 @@ public class MountController {
         return totalMounts.values().stream()
                 .map(mount -> !player.getMounts().contains(mount) ? mount : Mount.builder().id(mount.getId()).build())
                 .collect(Collectors.toList());
+    }
+
+    private ResponseEntity<String> toErrorResponse(String message) {
+        return toResponse(StatusResponse.error(message));
+    }
+
+    private ResponseEntity<String> toResponse(Object json) {
+        String message;
+
+        try {
+            message = jsonConverter.toString(json);
+        } catch (JsonProcessingException e) {
+            message = e.getMessage();
+        }
+
+        return ResponseEntity.ok()
+                .header("Access-Control-Allow-Origin", "*")
+                .body(message);
     }
 
     public class MountLoader extends Thread {
@@ -248,7 +299,7 @@ public class MountController {
             if (x > 1) {
                 content = httpClient.get(BASE_URL + freeCompanyUrl.getValue() + "?page=" + x);
             }
-            Pattern pattern = Pattern.compile("<li class=\"entry\"><a href=\"(.+?)\".+?<p class=\"entry__name\">(.+?)<\\/p>.+?<\\/li>.+?<\\/li>.+?<\\/li>");
+            Pattern pattern = Pattern.compile("<li class=\"entry\"><a href=\"(.+?)\".+?<p class=\"entry__name\">(.+?)</p>.+?</li>.+?</li>.+?</li>");
             Matcher matcher = pattern.matcher(content);
 
             // Load all the mounts for each player from the lodestone

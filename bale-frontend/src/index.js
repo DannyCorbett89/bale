@@ -46,11 +46,11 @@ class AddPlayer extends React.Component {
                             <option key={player.id} value={player.id}>{player.name}</option>
                         )}
                     </select>
-					<br/>
-					<br/>
+                    <br/>
+                    <br/>
                     <div className="footer">
-						<AddButton player={this.state.value}/>
-						&nbsp;
+                        <AddButton player={this.state.value}/>
+                        &nbsp;
                         <button onClick={this.props.onClose}>Close</button>
                     </div>
                 </div>
@@ -130,7 +130,7 @@ class Mounts extends React.Component {
     }
 
     componentWillMount() {
-        fetch('http://www.bahamutslegion.com:8081/json')
+        fetch('http://www.bahamutslegion.com:8081/listMounts')
             .then(results => {
                 return results.json();
             })
