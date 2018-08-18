@@ -93,6 +93,18 @@ public class MountController {
         return toResponse(response);
     }
 
+    @RequestMapping(value = "/listAvailableMounts", method = RequestMethod.GET, produces = {MediaType.APPLICATION_JSON_VALUE})
+    public ResponseEntity<String> listAvailableMounts() {
+        return toResponse(XIVDB_IDS.entrySet().stream()
+                .filter(entry -> !mountRepository.existsByName(entry.getKey()))
+                .map(entry -> Mount.builder()
+                        .id(entry.getValue())
+                        .name(entry.getKey())
+                        .build())
+                .sorted(Comparator.comparing(Mount::getName))
+                .collect(Collectors.toList()));
+    }
+
     private boolean anyPlayerHasMount(List<PlayerRS> players, Mount mount) {
         for (PlayerRS player : players) {
             for (Mount mountRS : player.getMounts()) {
@@ -143,7 +155,7 @@ public class MountController {
     }
 
     @RequestMapping(value = "/addMount", method = RequestMethod.GET, produces = {MediaType.APPLICATION_JSON_VALUE})
-    public ResponseEntity<String> addMount(@RequestParam("name") String name, @RequestParam("instance") String instance) {
+    public ResponseEntity<String> addMount(@RequestParam("name") String name, @RequestParam("instance") String instance) throws IOException {
         if (name == null || name.isEmpty()) {
             return toErrorResponse("Missing required parameter: name");
         }
@@ -171,12 +183,14 @@ public class MountController {
                 .build();
         mountRepository.save(mount);
 
+        loadMounts();
+
         return toResponse(StatusResponse.success());
     }
 
     @Transactional
     @RequestMapping(value = "/removeMount", method = RequestMethod.GET, produces = {MediaType.APPLICATION_JSON_VALUE})
-    public ResponseEntity<String> removeMount(@RequestParam("id") long id) {
+    public ResponseEntity<String> removeMount(@RequestParam("id") long id) throws IOException {
         if (id == 0) {
             return toErrorResponse("Missing required parameter: id");
         }
@@ -187,6 +201,9 @@ public class MountController {
 
         mountLinkRepository.deleteByMountId(id);
         mountRepository.delete(id);
+
+        loadMounts();
+
         return toResponse(StatusResponse.success());
     }
 
