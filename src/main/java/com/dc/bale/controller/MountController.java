@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import javax.transaction.Transactional;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -30,11 +31,14 @@ import java.util.stream.Collectors;
 public class MountController {
     private static final String BASE_URL = "https://na.finalfantasyxiv.com";
     private static final Map<String, List<Mount>> PLAYER_MOUNTS = new HashMap<>();
+    private static final Map<String, Long> XIVDB_IDS = new HashMap<>();
 
     @NonNull
     private HttpClient httpClient;
     @NonNull
     private JsonConverter jsonConverter;
+    @NonNull
+    private MountLinkRepository mountLinkRepository;
     @NonNull
     private MountRepository mountRepository;
     @NonNull
@@ -152,11 +156,16 @@ public class MountController {
             return toErrorResponse("Mount already exists with name " + name);
         }
 
+        if (!XIVDB_IDS.containsKey(name)) {
+            return toErrorResponse("Unknown mount: " + name);
+        }
+
         if (mountRepository.existsByInstance(instance)) {
-            return toErrorResponse("Mount already exists with instance" + instance);
+            return toErrorResponse("Mount already exists with instance " + instance);
         }
 
         Mount mount = Mount.builder()
+                .id(XIVDB_IDS.get(name))
                 .name(name)
                 .instance(instance)
                 .build();
@@ -165,6 +174,7 @@ public class MountController {
         return toResponse(StatusResponse.success());
     }
 
+    @Transactional
     @RequestMapping(value = "/removeMount", method = RequestMethod.GET, produces = {MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<String> removeMount(@RequestParam("id") long id) {
         if (id == 0) {
@@ -175,13 +185,17 @@ public class MountController {
             return toErrorResponse("Mount does not exist, unable to delete");
         }
 
-        // TODO: Delete links
+        mountLinkRepository.deleteByMountId(id);
         mountRepository.delete(id);
         return toResponse(StatusResponse.success());
     }
 
     @Scheduled(fixedRate = 3600000)
     public void loadMounts() throws IOException {
+        if (XIVDB_IDS.isEmpty()) {
+            loadXivDBIds();
+        }
+
         Map<String, Mount> totalMounts = mountRepository.findAll().stream()
                 .collect(Collectors.toMap(Mount::getName, mount -> mount));
 
@@ -337,5 +351,11 @@ public class MountController {
         return players.values().stream()
                 .filter(Player::isTracking)
                 .collect(Collectors.toList());
+    }
+
+    private void loadXivDBIds() throws IOException {
+        String content = httpClient.get("https://api.xivdb.com/mount");
+        List<Map<String, Object>> mounts = jsonConverter.toObject(content);
+        mounts.forEach(mount -> XIVDB_IDS.put((String) mount.get("name"), ((Integer) mount.get("id")).longValue()));
     }
 }

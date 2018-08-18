@@ -5,18 +5,19 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import javax.persistence.Entity;
-import javax.persistence.Id;
+import javax.persistence.*;
 
 @Entity
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class Mount {
+public class MountLink {
     @Id
+    @GeneratedValue(strategy = GenerationType.AUTO)
     private long id;
-    private String name;
-    private String instance;
+    @Column(name = "player_id")
+    private long playerId;
+    @Column(name = "mount_id")
+    private long mountId;
 }
-                      

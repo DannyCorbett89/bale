@@ -2,7 +2,7 @@ use bale;
 
 drop table if exists mount;
 create table mount (
-  id int not null auto_increment,
+  id int not null,
   name varchar(200),
   instance varchar(200),
   primary key (id),
