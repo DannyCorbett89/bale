@@ -6,5 +6,6 @@ import java.util.List;
 
 public interface PlayerRepository extends JpaRepository<Player, Long> {
     Player findByName(String name);
-    List<Player> findByTrackingFalse();
+
+    List<Player> findByTrackingFalseOrderByName();
 }

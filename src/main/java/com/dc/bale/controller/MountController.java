@@ -50,12 +50,7 @@ public class MountController {
 
     @RequestMapping(value = "/players", method = RequestMethod.GET, produces = {MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<String> listPlayers() {
-        return toResponse(playerRepository.findByTrackingFalse());
-    }
-
-    @RequestMapping(value = "/json", method = RequestMethod.GET, produces = {MediaType.APPLICATION_JSON_VALUE})
-    public ResponseEntity<String> listMountsJSON(@RequestParam(value = "refresh", required = false) String refresh) throws IOException {
-        return listMounts(refresh);
+        return toResponse(playerRepository.findByTrackingFalseOrderByName());
     }
 
     @RequestMapping(value = "/listMounts", method = RequestMethod.GET, produces = {MediaType.APPLICATION_JSON_VALUE})
@@ -324,6 +319,7 @@ public class MountController {
                 .collect(Collectors.toMap(Player::getName, player -> player));
         Map<Player, MountLoader> loaders = new HashMap<>();
         int numPages = getNumPages(content);
+        Set<Player> existingPlayers = new HashSet<>();
 
         for (int x = 1; x <= numPages; x++) {
             // First page is already loaded, don't load it again
@@ -353,6 +349,7 @@ public class MountController {
                     mountLoader.start();
                     loaders.put(player, mountLoader);
                 }
+                existingPlayers.add(player);
             }
         }
 
@@ -365,7 +362,14 @@ public class MountController {
             }
         });
 
+        Set<Player> oldPlayers = players.values().stream()
+                .filter(player -> !existingPlayers.contains(player))
+                .collect(Collectors.toSet());
+
+        playerRepository.delete(oldPlayers);
+
         return players.values().stream()
+                .filter(player -> playerRepository.exists(player.getId()))
                 .filter(Player::isTracking)
                 .collect(Collectors.toList());
     }
