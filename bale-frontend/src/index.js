@@ -1,6 +1,8 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
 import './index.css';
+import {BrowserRouter, Route, Switch} from "react-router-dom";
+import Videos from './videos'
 
 class MessageWindow extends React.Component {
     constructor(props) {
@@ -369,6 +371,41 @@ class Mounts extends React.Component {
     }
 }
 
+class Header extends React.Component {
+    constructor() {
+        super();
+    }
+
+    render() {
+        return (
+            <div>
+                {/* TODO: Some sort of navigation */}
+            </div>
+        );
+    }
+}
+
+class Main extends React.Component {
+    constructor() {
+        super();
+    }
+
+    render() {
+        return (
+            <div>
+                <Header/>
+                <Switch>
+                    <Route exact path="/" component={Mounts}/>
+                    <Route path="/videos" component={Videos}/>
+                </Switch>
+            </div>
+        );
+    }
+}
+
 // ========================================
 
-ReactDOM.render(<Mounts/>, document.getElementById("root"));
+ReactDOM.render(
+    <BrowserRouter>
+        <Main/>
+    </BrowserRouter>, document.getElementById("root"));
