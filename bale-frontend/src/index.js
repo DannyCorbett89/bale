@@ -2,7 +2,24 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import './index.css';
 import {BrowserRouter, Route, Switch} from "react-router-dom";
-import Videos from './videos'
+import NavBar from './NavBar'
+import Videos, {VideoButtons} from './videos'
+import Table from "@material-ui/core/Table";
+import TableHead from "@material-ui/core/TableHead";
+import TableRow from "@material-ui/core/TableRow";
+import TableCell from "@material-ui/core/TableCell";
+import TableBody from "@material-ui/core/TableBody";
+import {withStyles} from "@material-ui/core";
+import Button from "@material-ui/core/Button/Button";
+import Dialog from "@material-ui/core/Dialog/Dialog";
+import DialogTitle from "@material-ui/core/DialogTitle/DialogTitle";
+import DialogContent from "@material-ui/core/DialogContent/DialogContent";
+import DialogActions from "@material-ui/core/DialogActions/DialogActions";
+import Select from "@material-ui/core/Select/Select";
+import MenuItem from "@material-ui/core/MenuItem/MenuItem";
+import InputLabel from "@material-ui/core/InputLabel/InputLabel";
+import TextField from "@material-ui/core/TextField/TextField";
+import {isMobile} from 'react-device-detect';
 
 class MessageWindow extends React.Component {
     constructor(props) {
@@ -19,11 +36,14 @@ class MessageWindow extends React.Component {
         }
 
         return (
-            <div className="backdrop">
-                <div className="modal">
-                    <p>{this.state.text}</p>
-                </div>
-            </div>
+            <Dialog
+                open="true"
+                onClose={this.handleClose}
+                aria-labelledby="alert-dialog-title"
+                aria-describedby="alert-dialog-description"
+            >
+                <DialogTitle id="alert-dialog-title">{this.state.text}</DialogTitle>
+            </Dialog>
         );
     }
 }
@@ -32,6 +52,7 @@ class AddPlayer extends React.Component {
     constructor() {
         super();
         this.state = {
+            open: false,
             players: [],
             value: ''
         };
@@ -56,30 +77,49 @@ class AddPlayer extends React.Component {
         this.setState({value: event.target.value});
     }
 
+    handleClickOpen = () => {
+        this.setState({open: true});
+    };
+
+    handleClose = () => {
+        this.setState({open: false});
+    };
+
     render() {
-        // Render nothing if the "show" prop is false
-        if (!this.props.show) {
-            return null;
+        /* TODO: Native dialog for mobile */
+        let mobile;
+
+        if (isMobile) {
+            mobile = <div/>;
+        } else {
+            mobile = <div/>
         }
 
         return (
-            <div className="backdrop">
-                <div className="modal">
-                    <h3>Add Player</h3>
-                    <select onChange={this.handleChange}
-                            value={this.state.value}>
-                        {this.state.players.map((player) =>
-                            <option key={player.id} value={player.id}>{player.name}</option>
-                        )}
-                    </select>
-                    <br/>
-                    <br/>
-                    <div className="footer">
+            <div className="row">
+                <Button color="inherit" onClick={this.handleClickOpen}>Add Player</Button>
+                {mobile}
+                <Dialog
+                    open={this.state.open}
+                    onClose={this.handleClose}
+                    aria-labelledby="form-dialog-title"
+                >
+                    <DialogTitle id="form-dialog-title">Add Player</DialogTitle>
+                    <DialogContent>
+                        <Select onChange={this.handleChange}
+                                value={this.state.value}>
+                            {this.state.players.map((player) =>
+                                <MenuItem value={player.id}>{player.name}</MenuItem>
+                            )}
+                        </Select>
+                    </DialogContent>
+                    <DialogActions>
                         <AddPlayerButton player={this.state.value}/>
-                        &nbsp;
-                        <button onClick={this.props.onClose}>Close</button>
-                    </div>
-                </div>
+                        <Button onClick={this.handleClose} color="primary">
+                            Close
+                        </Button>
+                    </DialogActions>
+                </Dialog>
             </div>
         );
     }
@@ -107,9 +147,10 @@ class AddPlayerButton extends React.Component {
 
     render() {
         return (
-            <button id={this.props.player}
+            <Button id={this.props.player}
+                    color="primary"
                     onClick={() => this.addPlayer(this.props.player)}
-                    disabled={this.state.disabled}>{this.state.text}</button>
+                    disabled={this.state.disabled}>{this.state.text}</Button>
         );
     }
 }
@@ -118,6 +159,7 @@ class AddMount extends React.Component {
     constructor() {
         super();
         this.state = {
+            open: false,
             mounts: [],
             mountName: '',
             instanceName: ''
@@ -152,34 +194,53 @@ class AddMount extends React.Component {
         });
     }
 
-    render() {
-        // Render nothing if the "show" prop is false
-        if (!this.props.show) {
-            return null;
-        }
+    handleChange(event) {
+        this.setState({value: event.target.value});
+    }
 
+    handleClickOpen = () => {
+        this.setState({open: true});
+    };
+
+    handleClose = () => {
+        this.setState({open: false});
+    };
+
+    render() {
         return (
-            <div className="backdrop">
-                <div className="modal">
-                    <h3>Add Mount</h3>
-                    <p>Mount name</p>
-                    <select onChange={this.handleMountChange}
-                            value={this.state.value}>
-                        {this.state.mounts.map((mount) =>
-                            <option key={mount.id} value={mount.name}>{mount.name}</option>
-                        )}
-                    </select>
-                    <p>Instance name</p>
-                    <input type="text" name="instance" value={this.state.instanceName}
-                           onChange={this.handleInstanceChange}/>
-                    <br/>
-                    <br/>
-                    <div className="footer">
+            <div className="row">
+                <Button color="inherit" onClick={this.handleClickOpen}>Add Mount</Button>
+                <Dialog
+                    open={this.state.open}
+                    onClose={this.handleClose}
+                    aria-labelledby="form-dialog-title"
+                >
+                    <DialogTitle id="form-dialog-title">Add Mount</DialogTitle>
+                    <DialogContent>
+                        <InputLabel>Mount </InputLabel>
+                        <Select onChange={this.handleMountChange}
+                                value={this.state.mountName}>
+                            {this.state.mounts.map((mount) =>
+                                <MenuItem value={mount.name}>{mount.name}</MenuItem>
+                            )}
+                        </Select>
+                        <TextField
+                            autoFocus
+                            margin="dense"
+                            id="name"
+                            label="Display Name"
+                            value={this.state.instanceName}
+                            onChange={this.handleInstanceChange}
+                            fullWidth
+                        />
+                    </DialogContent>
+                    <DialogActions>
                         <AddMountButton mountName={this.state.mountName} instanceName={this.state.instanceName}/>
-                        &nbsp;
-                        <button onClick={this.props.onClose}>Close</button>
-                    </div>
-                </div>
+                        <Button onClick={this.handleClose} color="primary">
+                            Close
+                        </Button>
+                    </DialogActions>
+                </Dialog>
             </div>
         );
     }
@@ -207,9 +268,10 @@ class AddMountButton extends React.Component {
 
     render() {
         return (
-            <button id={this.props.mountName}
+            <Button id={this.props.mountName}
+                    color="primary"
                     onClick={() => this.addMount(this.props.mountName)}
-                    disabled={this.state.disabled}>{this.state.text}</button>
+                    disabled={this.state.disabled}>{this.state.text}</Button>
         );
     }
 }
@@ -239,9 +301,11 @@ class RemovePlayerButton extends React.Component {
     render() {
         return (
             <div>
-                <button id={this.state.player.name}
+                <Button id={this.state.player.name}
+                        variant="outlined"
+                        size="small"
                         onClick={() => this.removePlayer(this.state.player.name)}
-                        disabled={this.state.disabled}>{this.state.text}</button>
+                        disabled={this.state.disabled}>{this.state.text}</Button>
                 <MessageWindow show={this.state.messageWindowIsOpen} text={"Removing " + this.state.player.name}/>
             </div>
         );
@@ -273,14 +337,25 @@ class RemoveMountButton extends React.Component {
     render() {
         return (
             <div>
-                <button id={this.state.mount.name}
+                <Button id={this.state.mount.name}
+                        variant="outlined"
+                        size="small"
                         onClick={() => this.removeMount(this.state.mount)}
-                        disabled={this.state.disabled}>{this.state.text}</button>
+                        disabled={this.state.disabled}>{this.state.text}</Button>
                 <MessageWindow show={this.state.messageWindowIsOpen} text={"Removing " + this.state.mount.name}/>
             </div>
         );
     }
 }
+
+const CustomTableCell = withStyles(theme => ({
+    head: {
+        textAlign: 'center'
+    },
+    body: {
+        textAlign: 'center'
+    },
+}))(TableCell);
 
 class Mounts extends React.Component {
     constructor() {
@@ -288,9 +363,7 @@ class Mounts extends React.Component {
         this.state = {
             updated: null,
             columns: null,
-            players: [{mounts: []}],
-            addPlayerIsOpen: false,
-            addMountIsOpen: false
+            players: [{mounts: []}]
         };
     }
 
@@ -313,87 +386,79 @@ class Mounts extends React.Component {
         document.title = "Bahamut's Legion";
     }
 
-    togglePlayerModal = () => {
-        this.setState({
-            addPlayerIsOpen: !this.state.addPlayerIsOpen
-        });
-    };
-
-    toggleMountModal = () => {
-        this.setState({
-            addMountIsOpen: !this.state.addMountIsOpen
-        });
-    };
-
     render() {
-        const players = this.state.players.map((player) =>
-            <tr key={player.name} className="highlight">
-                <td>{player.name}</td>
-
-                {player.mounts.map((mount) =>
-                    <td key={mount.name}>{mount.instance}</td>
-                )}
-
-                <td>
-                    <RemovePlayerButton player={player} action={this.toggleMountModal}/>
-                </td>
-            </tr>);
         return (
             <div>
-                <table border="1">
-                    <tbody>
-                    <tr>
-                        <th>Name</th>
-                        <th colSpan={this.state.columns + 1}>Mounts Needed</th>
-                    </tr>
-                    {players}
-                    <tr>
-                        <td/>
-                        {this.state.players[0].mounts.map((mount) =>
-                            <td key={mount.name} align="center">
-                                <RemoveMountButton mount={mount}/>
-                            </td>
-                        )}
-                        <td/>
-                    </tr>
-                    </tbody>
-                </table>
+                <Table padding="none">
+                    <TableHead>
+                        <TableRow>
+                            <CustomTableCell>Name</CustomTableCell>
+                            <CustomTableCell colSpan={this.state.columns + 1}>Mounts
+                                Needed</CustomTableCell>
+                        </TableRow>
+                    </TableHead>
+                    <TableBody>
+                        {this.state.players.map((player) =>
+                            <TableRow key={player.name} className="highlight">
+                                <CustomTableCell>{player.name}</CustomTableCell>
+
+                                {player.mounts.map((mount) =>
+                                    <CustomTableCell key={mount.name}>{mount.instance}</CustomTableCell>
+                                )}
+
+                                <CustomTableCell>
+                                    <RemovePlayerButton player={player}/>
+                                </CustomTableCell>
+                            </TableRow>)}
+                        <TableRow>
+                            <CustomTableCell/>
+                            {this.state.players[0].mounts.map((mount) =>
+                                <CustomTableCell key={mount.name} align="center">
+                                    <RemoveMountButton mount={mount}/>
+                                </CustomTableCell>
+                            )}
+                            <CustomTableCell/>
+                        </TableRow>
+                    </TableBody>
+                </Table>
                 <p>Last Updated: {this.state.updated}</p>
-                <button onClick={this.togglePlayerModal}>Add Player</button>
-                &nbsp;
-                <button onClick={this.toggleMountModal}>Add Mount</button>
-                <AddPlayer show={this.state.addPlayerIsOpen}
-                           onClose={this.togglePlayerModal}/>
-                <AddMount show={this.state.addMountIsOpen}
-                          onClose={this.toggleMountModal}/>
             </div>
         );
     }
 }
 
-class Header extends React.Component {
-    constructor() {
-        super();
-    }
-
+class MountButtons extends React.Component {
     render() {
+        let content;
+        const url = window.location.href;
+        const page = url.substr(url.lastIndexOf("/"));
+
+        if (page === "/") {
+            content =
+                <div className="rows">
+                    <AddPlayer/>
+                    <AddMount/>
+                </div>;
+        } else {
+            content = <div/>;
+        }
+
         return (
             <div>
-                {/* TODO: Some sort of navigation */}
+                {content}
             </div>
         );
     }
 }
 
 class Main extends React.Component {
-    constructor() {
-        super();
-    }
-
     render() {
         return (
             <div>
-                <Header/>
+                <NavBar>
+                    <MountButtons/>
+                    <VideoButtons/>
+                </NavBar>
                 <Switch>
                     <Route exact path="/" component={Mounts}/>
                     <Route path="/videos" component={Videos}/>
