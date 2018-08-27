@@ -19,7 +19,8 @@ import Select from "@material-ui/core/Select/Select";
 import MenuItem from "@material-ui/core/MenuItem/MenuItem";
 import InputLabel from "@material-ui/core/InputLabel/InputLabel";
 import TextField from "@material-ui/core/TextField/TextField";
-import {isMobile} from 'react-device-detect';
+import Paper from "@material-ui/core/Paper/Paper";
+import {isMobile} from "react-device-detect";
 
 class MessageWindow extends React.Component {
     constructor(props) {
@@ -86,19 +87,9 @@ class AddPlayer extends React.Component {
     };
 
     render() {
-        /* TODO: Native dialog for mobile */
-        let mobile;
-
-        if (isMobile) {
-            mobile = <div/>;
-        } else {
-            mobile = <div/>
-        }
-
         return (
             <div className="row">
                 <Button color="inherit" onClick={this.handleClickOpen}>Add Player</Button>
-                {mobile}
                 <Dialog
                     open={this.state.open}
                     onClose={this.handleClose}
@@ -357,7 +348,7 @@ const CustomTableCell = withStyles(theme => ({
     },
 }))(TableCell);
 
-class Mounts extends React.Component {
+class MountsTable extends React.Component {
     constructor() {
         super();
         this.state = {
@@ -388,39 +379,86 @@ class Mounts extends React.Component {
 
     render() {
         return (
-            <div>
-                <Table padding="none">
-                    <TableHead>
-                        <TableRow>
-                            <CustomTableCell>Name</CustomTableCell>
-                            <CustomTableCell colSpan={this.state.columns + 1}>Mounts
-                                Needed</CustomTableCell>
-                        </TableRow>
-                    </TableHead>
-                    <TableBody>
-                        {this.state.players.map((player) =>
-                            <TableRow key={player.name} className="highlight">
-                                <CustomTableCell>{player.name}</CustomTableCell>
+            <Table padding="none">
+                <TableHead>
+                    <TableRow>
+                        <CustomTableCell>Name</CustomTableCell>
+                        <CustomTableCell colSpan={this.state.columns + 1}>Mounts
+                            Needed</CustomTableCell>
+                    </TableRow>
+                </TableHead>
+                <TableBody>
+                    {this.state.players.map((player) =>
+                        <TableRow key={player.name} className="highlight">
+                            <CustomTableCell>{player.name}</CustomTableCell>
 
-                                {player.mounts.map((mount) =>
-                                    <CustomTableCell key={mount.name}>{mount.instance}</CustomTableCell>
-                                )}
-
-                                <CustomTableCell>
-                                    <RemovePlayerButton player={player}/>
-                                </CustomTableCell>
-                            </TableRow>)}
-                        <TableRow>
-                            <CustomTableCell/>
-                            {this.state.players[0].mounts.map((mount) =>
-                                <CustomTableCell key={mount.name} align="center">
-                                    <RemoveMountButton mount={mount}/>
-                                </CustomTableCell>
+                            {player.mounts.map((mount) =>
+                                <CustomTableCell key={mount.name}>{mount.instance}</CustomTableCell>
                             )}
-                            <CustomTableCell/>
-                        </TableRow>
-                    </TableBody>
-                </Table>
+
+                            <CustomTableCell>
+                                <RemovePlayerButton player={player}/>
+                            </CustomTableCell>
+                        </TableRow>)}
+                    <TableRow>
+                        <CustomTableCell/>
+                        {this.state.players[0].mounts.map((mount) =>
+                            <CustomTableCell key={mount.name} align="center">
+                                <RemoveMountButton mount={mount}/>
+                            </CustomTableCell>
+                        )}
+                        <CustomTableCell/>
+                    </TableRow>
+                </TableBody>
+            </Table>
+        );
+    }
+}
+
+class Mounts extends React.Component {
+    constructor() {
+        super();
+        this.state = {
+            updated: null,
+            columns: null,
+            players: [{mounts: []}]
+        };
+    }
+
+    componentWillMount() {
+        fetch('http://www.bahamutslegion.com:8081/listMounts')
+            .then(results => {
+                return results.json();
+            })
+            .then(data => {
+                this.setState({
+                    updated: data.lastUpdated,
+                    columns: data.columns,
+                    players: data.players
+                });
+                console.log("state", this.state.players);
+            })
+    }
+
+    componentDidMount() {
+        document.title = "Bahamut's Legion";
+    }
+
+    render() {
+        let table;
+
+        if (isMobile) {
+            table =
+                <Paper style={{width: '100%', overflowX: 'auto'}}>
+                    <MountsTable/>
+                </Paper>;
+        } else {
+            table = <MountsTable/>;
+        }
+
+        return (
+            <div>
+                {table}
                 <p>Last Updated: {this.state.updated}</p>
             </div>
         );
