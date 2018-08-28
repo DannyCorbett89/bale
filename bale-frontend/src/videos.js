@@ -26,14 +26,6 @@ export class VideoButtons extends React.Component {
 }
 
 class Videos extends React.Component {
-    constructor() {
-        super();
-    }
-
-    componentDidMount() {
-        document.title = "Bahamut's Legion";
-    }
-
     render() {
         const opts = {
             height: '195',

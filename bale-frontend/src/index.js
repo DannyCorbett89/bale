@@ -100,7 +100,7 @@ class AddPlayer extends React.Component {
                         <Select onChange={this.handleChange}
                                 value={this.state.value}>
                             {this.state.players.map((player) =>
-                                <MenuItem value={player.id}>{player.name}</MenuItem>
+                                <MenuItem key={player.id} value={player.id}>{player.name}</MenuItem>
                             )}
                         </Select>
                     </DialogContent>
@@ -212,7 +212,7 @@ class AddMount extends React.Component {
                         <Select onChange={this.handleMountChange}
                                 value={this.state.mountName}>
                             {this.state.mounts.map((mount) =>
-                                <MenuItem value={mount.name}>{mount.name}</MenuItem>
+                                <MenuItem key={mount.name} value={mount.name}>{mount.name}</MenuItem>
                             )}
                         </Select>
                         <TextField
@@ -373,10 +373,6 @@ class MountsTable extends React.Component {
             })
     }
 
-    componentDidMount() {
-        document.title = "Bahamut's Legion";
-    }
-
     render() {
         return (
             <Table padding="none">
@@ -393,7 +389,7 @@ class MountsTable extends React.Component {
                             <CustomTableCell>{player.name}</CustomTableCell>
 
                             {player.mounts.map((mount) =>
-                                <CustomTableCell key={mount.name}>{mount.instance}</CustomTableCell>
+                                <CustomTableCell key={mount.id}>{mount.instance}</CustomTableCell>
                             )}
 
                             <CustomTableCell>
@@ -403,7 +399,7 @@ class MountsTable extends React.Component {
                     <TableRow>
                         <CustomTableCell/>
                         {this.state.players[0].mounts.map((mount) =>
-                            <CustomTableCell key={mount.name} align="center">
+                            <CustomTableCell key={mount.id} align="center">
                                 <RemoveMountButton mount={mount}/>
                             </CustomTableCell>
                         )}
@@ -438,10 +434,6 @@ class Mounts extends React.Component {
                 });
                 console.log("state", this.state.players);
             })
-    }
-
-    componentDidMount() {
-        document.title = "Bahamut's Legion";
     }
 
     render() {
