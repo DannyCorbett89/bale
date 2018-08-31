@@ -4,11 +4,7 @@ import './index.css';
 import {BrowserRouter, Route, Switch} from "react-router-dom";
 import NavBar from './NavBar'
 import Videos, {VideoButtons} from './videos'
-import Table from "@material-ui/core/Table";
-import TableHead from "@material-ui/core/TableHead";
-import TableRow from "@material-ui/core/TableRow";
 import TableCell from "@material-ui/core/TableCell";
-import TableBody from "@material-ui/core/TableBody";
 import {withStyles} from "@material-ui/core";
 import Button from "@material-ui/core/Button/Button";
 import Dialog from "@material-ui/core/Dialog/Dialog";
@@ -21,6 +17,11 @@ import InputLabel from "@material-ui/core/InputLabel/InputLabel";
 import TextField from "@material-ui/core/TextField/TextField";
 import Paper from "@material-ui/core/Paper/Paper";
 import {isMobile} from "react-device-detect";
+import LinearProgress from "@material-ui/core/LinearProgress/LinearProgress";
+import Table from "@material-ui/core/Table";
+import TableHead from "@material-ui/core/TableHead";
+import TableRow from "@material-ui/core/TableRow";
+import TableBody from "@material-ui/core/TableBody";
 
 class MessageWindow extends React.Component {
     constructor(props) {
@@ -348,7 +349,7 @@ const CustomTableCell = withStyles(theme => ({
     },
 }))(TableCell);
 
-class MountsTable extends React.Component {
+class Mounts extends React.Component {
     constructor() {
         super();
         this.state = {
@@ -357,6 +358,7 @@ class MountsTable extends React.Component {
             players: [{mounts: []}]
         };
     }
+
 
     componentWillMount() {
         fetch('http://www.bahamutslegion.com:8081/listMounts')
@@ -374,8 +376,17 @@ class MountsTable extends React.Component {
     }
 
     render() {
-        return (
-            <Table padding="none">
+        let table;
+        let result;
+        let updated;
+
+        if (this.state.updated == null) {
+            table = <div>
+                <p align="center">Loading mounts...</p>
+                <LinearProgress/>
+            </div>
+        } else {
+            table = <Table padding="none">
                 <TableHead>
                     <TableRow>
                         <CustomTableCell>Name</CustomTableCell>
@@ -406,52 +417,30 @@ class MountsTable extends React.Component {
                         <CustomTableCell/>
                     </TableRow>
                 </TableBody>
-            </Table>
-        );
-    }
-}
+            </Table>;
 
-class Mounts extends React.Component {
-    constructor() {
-        super();
-        this.state = {
-            updated: null,
-            columns: null,
-            players: [{mounts: []}]
-        };
-    }
-
-    componentWillMount() {
-        fetch('http://www.bahamutslegion.com:8081/listMounts')
-            .then(results => {
-                return results.json();
-            })
-            .then(data => {
-                this.setState({
-                    updated: data.lastUpdated,
-                    columns: data.columns,
-                    players: data.players
-                });
-                console.log("state", this.state.players);
-            })
-    }
-
-    render() {
-        let table;
+            updated = <p>Last Updated: {this.state.updated}</p>;
+        }
 
         if (isMobile) {
-            table =
-                <Paper style={{width: '100%', overflowX: 'auto'}}>
-                    <MountsTable/>
-                </Paper>;
+            result =
+                <div>
+                    <Paper style={{width: '100%', overflowX: 'auto'}}>
+                        {table}
+                    </Paper>
+                    {updated}
+                </div>;
         } else {
-            table = <MountsTable/>;
+            result =
+                <div>
+                    {table}
+                    {updated}
+                </div>;
         }
 
         return (
             <div>
-                {table}
-                <p>Last Updated: {this.state.updated}</p>
+                {result}
             </div>
         );
     }
