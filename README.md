@@ -1,5 +1,6 @@
 # Usage
 The backend is a Spring-Boot application, once that's started up it's accessible on port 8081
+
 The frontend is a React application, start that up (in development mode) by running `npm start` from the `bale/bale-frontend/src` directory
 
 To package the frontend up for production, run these commands from the `bale/bale-frontend/src` directory:
