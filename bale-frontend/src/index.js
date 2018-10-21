@@ -71,7 +71,7 @@ class AddPlayer extends React.Component {
                     players: data,
                     value: data[0].id
                 });
-                console.log("state", this.state.players);
+                console.log("players", this.state.players);
             })
     }
 
@@ -170,7 +170,7 @@ class AddMount extends React.Component {
                     mounts: data,
                     mountName: data[0].name
                 });
-                console.log("state", this.state.mounts);
+                console.log("listAvailableMounts", this.state.mounts);
             })
     }
 
@@ -371,7 +371,7 @@ class Mounts extends React.Component {
                     columns: data.columns,
                     players: data.players
                 });
-                console.log("state", this.state.players);
+                console.log("listMounts", this.state.players);
             })
     }
 

@@ -36,6 +36,7 @@ class Videos extends React.Component {
                 <p>BaLe</p>
                 <YouTube opts={opts} videoId="X1SkQQF6YaU"/> {/* Bale Intro */}
                 <YouTube opts={opts} videoId="7CeTW1dVg7A"/> {/* Return to T9 */}
+                <YouTube opts={opts} videoId="n0W60JQq7jA"/> {/* Old footage */}
                 <p>Streams</p>
                 <YouTube opts={opts} videoId="tLza8h0FPUc"/> {/* Maps */}
                 <p>Raids</p>
@@ -47,11 +48,17 @@ class Videos extends React.Component {
                 <YouTube opts={opts} videoId="Aop8snbhmyk"/> {/* A6S Win */}
                 <YouTube opts={opts} videoId="GNZAqFGNuWQ"/> {/* Brute Justice Win */}
                 <p>Trials</p>
+                <YouTube opts={opts} videoId="LwhVV7-dZXc"/> {/* Lala stamping */}
+                <YouTube opts={opts} videoId="bHo9LN5T-wI"/> {/* Suzaku */}
+                <YouTube opts={opts} videoId="TSHuUaRxkzg"/> {/* Byakko */}
                 <YouTube opts={opts} videoId="aNSe1nMPfoQ"/> {/* Shinryu fail */}
                 <YouTube opts={opts} videoId="eeGBnGqIBME"/> {/* Shinryu Active Time Fail */}
                 <YouTube opts={opts} videoId="XKRCtaudA14"/> {/* Lelouch Rescue */}
                 <YouTube opts={opts} videoId="Ln1mr_ZMCnY"/> {/* Sophia 1% */}
                 <p>Others</p>
+                <YouTube opts={opts} videoId="Tn5kbHpSiUo"/> {/* Alv and Cordia dancing */}
+                <YouTube opts={opts} videoId="lDxjmMgefvI"/> {/* New Maps type */}
+                <YouTube opts={opts} videoId="IAna3PaFU20"/> {/* 5 Year Anniversary */}
                 <YouTube opts={opts} videoId="aTCD2EeBAAo"/> {/* No Carbuncle No */}
                 <YouTube opts={opts} videoId="j5W7rilOroM"/> {/* Eureka - Jurassic Park */}
                 <YouTube opts={opts} videoId="Eg-bXtyXvWA"/> {/* FF Type Bale */}
