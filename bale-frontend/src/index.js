@@ -14,7 +14,6 @@ import DialogActions from "@material-ui/core/DialogActions/DialogActions";
 import Select from "@material-ui/core/Select/Select";
 import MenuItem from "@material-ui/core/MenuItem/MenuItem";
 import InputLabel from "@material-ui/core/InputLabel/InputLabel";
-import TextField from "@material-ui/core/TextField/TextField";
 import Paper from "@material-ui/core/Paper/Paper";
 import {isMobile} from "react-device-detect";
 import LinearProgress from "@material-ui/core/LinearProgress/LinearProgress";
@@ -27,7 +26,8 @@ class MessageWindow extends React.Component {
     constructor(props) {
         super();
         this.state = {
-            text: props.text
+            text: props.text,
+            onClick: props.onClick
         };
     }
 
@@ -45,6 +45,11 @@ class MessageWindow extends React.Component {
                 aria-describedby="alert-dialog-description"
             >
                 <DialogTitle id="alert-dialog-title">{this.state.text}</DialogTitle>
+                <DialogActions>
+                    <Button onClick={this.state.onClick} color="primary">
+                        Close
+                    </Button>
+                </DialogActions>
             </Dialog>
         );
     }
@@ -153,11 +158,9 @@ class AddMount extends React.Component {
         this.state = {
             open: false,
             mounts: [],
-            mountName: '',
-            instanceName: ''
+            mountName: ''
         };
         this.handleMountChange = this.handleMountChange.bind(this);
-        this.handleInstanceChange = this.handleInstanceChange.bind(this);
     }
 
     componentWillMount() {
@@ -172,17 +175,14 @@ class AddMount extends React.Component {
                 });
                 console.log("listAvailableMounts", this.state.mounts);
             })
+            .catch(error => {
+                console.log("Empty response for /listAvailableMounts", error)
+            });
     }
 
     handleMountChange(event) {
         this.setState({
             mountName: event.target.value
-        });
-    }
-
-    handleInstanceChange(event) {
-        this.setState({
-            instanceName: event.target.value
         });
     }
 
@@ -199,40 +199,39 @@ class AddMount extends React.Component {
     };
 
     render() {
+        let window;
+
+        if (this.state.mountName === "") {
+            window = <MessageWindow show={this.state.open} text={"No more mounts to add"} onClick={this.handleClose}/>;
+        } else {
+            window = <Dialog
+                open={this.state.open}
+                onClose={this.handleClose}
+                aria-labelledby="form-dialog-title"
+            >
+                <DialogTitle id="form-dialog-title">Add Mount</DialogTitle>
+                <DialogContent>
+                    <InputLabel>Mount </InputLabel>
+                    <Select onChange={this.handleMountChange}
+                            value={this.state.mountName}>
+                        {this.state.mounts.map((mount) =>
+                            <MenuItem key={mount.name} value={mount.name}>{mount.name}</MenuItem>
+                        )}
+                    </Select>
+                </DialogContent>
+                <DialogActions>
+                    <AddMountButton mountName={this.state.mountName}/>
+                    <Button onClick={this.handleClose} color="primary">
+                        Close
+                    </Button>
+                </DialogActions>
+            </Dialog>;
+        }
+
         return (
             <div className="row">
                 <Button color="inherit" onClick={this.handleClickOpen}>Add Mount</Button>
-                <Dialog
-                    open={this.state.open}
-                    onClose={this.handleClose}
-                    aria-labelledby="form-dialog-title"
-                >
-                    <DialogTitle id="form-dialog-title">Add Mount</DialogTitle>
-                    <DialogContent>
-                        <InputLabel>Mount </InputLabel>
-                        <Select onChange={this.handleMountChange}
-                                value={this.state.mountName}>
-                            {this.state.mounts.map((mount) =>
-                                <MenuItem key={mount.name} value={mount.name}>{mount.name}</MenuItem>
-                            )}
-                        </Select>
-                        <TextField
-                            autoFocus
-                            margin="dense"
-                            id="name"
-                            label="Display Name"
-                            value={this.state.instanceName}
-                            onChange={this.handleInstanceChange}
-                            fullWidth
-                        />
-                    </DialogContent>
-                    <DialogActions>
-                        <AddMountButton mountName={this.state.mountName} instanceName={this.state.instanceName}/>
-                        <Button onClick={this.handleClose} color="primary">
-                            Close
-                        </Button>
-                    </DialogActions>
-                </Dialog>
+                {window}
             </div>
         );
     }
@@ -385,6 +384,8 @@ class Mounts extends React.Component {
                 <p align="center">Loading mounts...</p>
                 <LinearProgress/>
             </div>
+        } else if (this.state.players.length === 0) {
+            table = <p align="center">No Players are being tracked</p>
         } else {
             table = <Table padding="none">
                 <TableHead>

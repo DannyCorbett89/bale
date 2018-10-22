@@ -3,11 +3,14 @@ package com.dc.bale.controller;
 import com.dc.bale.component.HttpClient;
 import com.dc.bale.component.JsonConverter;
 import com.dc.bale.database.*;
+import com.dc.bale.model.AvailableMount;
+import com.dc.bale.model.MountRS;
 import com.dc.bale.model.PlayerRS;
 import com.dc.bale.model.Response;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -45,6 +48,8 @@ public class MountController {
     private PlayerRepository playerRepository;
     @NonNull
     private ConfigRepository configRepository;
+    @NonNull
+    private TrialRepository trialRepository;
 
     private String lastUpdated = "Never";
 
@@ -63,10 +68,10 @@ public class MountController {
                 .lastUpdated(lastUpdated)
                 .players(PLAYER_MOUNTS.entrySet().stream().map(stringListEntry -> PlayerRS.builder()
                         .name(stringListEntry.getKey())
-                        .mounts(stringListEntry.getValue().stream().map(mount -> Mount.builder()
+                        .mounts(stringListEntry.getValue().stream().map(mount -> MountRS.builder()
                                 .id(mount.getId())
                                 .name(mount.getName())
-                                .instance(mount.getInstance())
+                                .instance(getInstance(mount))
                                 .build()).collect(Collectors.toList()))
                         .build()).collect(Collectors.toList()))
                 .build();
@@ -75,7 +80,7 @@ public class MountController {
 
         for (PlayerRS player : players) {
             for (int i = player.getMounts().size() - 1; i >= 0; i--) {
-                Mount mount = player.getMounts().get(i);
+                MountRS mount = player.getMounts().get(i);
                 if (!anyPlayerHasMount(players, mount)) {
                     player.getMounts().remove(i);
                 }
@@ -83,27 +88,42 @@ public class MountController {
         }
 
         players.sort((o1, o2) -> Long.compare(o2.numMounts(), o1.numMounts()));
-        players.forEach(player -> player.getMounts().sort(Comparator.comparingLong(Mount::getId)));
+        players.forEach(player -> player.getMounts().sort(Comparator.comparingLong(MountRS::getId)));
 
         return toResponse(response);
     }
 
+    private String getInstance(Mount mount) {
+        if (mount.getName() == null) {
+            return null;
+        }
+
+        List<String> trialBossNames = mountLinkRepository.findAllByMountIdAndTrialIdGreaterThan(mount.getId(), 0).stream()
+                .map(mountLink -> trialRepository.findOne(mountLink.getTrialId()).getBoss())
+                .collect(Collectors.toList());
+
+        if (trialBossNames.size() == 0 || trialBossNames.size() > 1) {
+            return mount.getName();
+        } else {
+            return StringUtils.join(trialBossNames, "/");
+        }
+    }
+
     @RequestMapping(value = "/listAvailableMounts", method = RequestMethod.GET, produces = {MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<String> listAvailableMounts() {
-        return toResponse(XIVDB_IDS.entrySet().stream()
-                .filter(entry -> !mountRepository.existsByName(entry.getKey()))
-                .map(entry -> Mount.builder()
-                        .id(entry.getValue())
-                        .name(entry.getKey())
+        return toResponse(mountRepository.findAllByTracking(false).stream()
+                .map(mount -> AvailableMount.builder()
+                        .id(mount.getId())
+                        .name(mount.getName())
                         .build())
-                .sorted(Comparator.comparing(Mount::getName))
+                .sorted(Comparator.comparing(AvailableMount::getName))
                 .collect(Collectors.toList()));
     }
 
-    private boolean anyPlayerHasMount(List<PlayerRS> players, Mount mount) {
+    private boolean anyPlayerHasMount(List<PlayerRS> players, MountRS mount) {
         for (PlayerRS player : players) {
-            for (Mount mountRS : player.getMounts()) {
-                if (mountRS.getId() == mount.getId() && mountRS.getName() != null && mountRS.getInstance() != null) {
+            for (MountRS mountRS : player.getMounts()) {
+                if (mountRS.getId() == mount.getId() && mountRS.getName() != null) {
                     return true;
                 }
             }
@@ -115,7 +135,7 @@ public class MountController {
     @RequestMapping(value = "/addPlayer", method = RequestMethod.GET, produces = {MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<String> addPlayer(@RequestParam("playerId") long playerId) {
         try {
-            Map<String, Mount> totalMounts = mountRepository.findAll().stream()
+            Map<String, Mount> totalMounts = mountRepository.findAllByTracking(true).stream()
                     .collect(Collectors.toMap(Mount::getName, mount -> mount));
 
             Player player = playerRepository.findOne(playerId);
@@ -150,33 +170,19 @@ public class MountController {
     }
 
     @RequestMapping(value = "/addMount", method = RequestMethod.GET, produces = {MediaType.APPLICATION_JSON_VALUE})
-    public ResponseEntity<String> addMount(@RequestParam("name") String name, @RequestParam("instance") String instance) throws IOException {
+    public ResponseEntity<String> addMount(@RequestParam("name") String name) throws IOException {
         if (name == null || name.isEmpty()) {
             return toErrorResponse("Missing required parameter: name");
         }
 
-        if (instance == null || instance.isEmpty()) {
-            return toErrorResponse("Missing required parameter: instance");
-        }
+        Mount mount = mountRepository.findByName(name);
 
-        if (mountRepository.existsByName(name)) {
-            return toErrorResponse("Mount already exists with name " + name);
-        }
-
-        if (!XIVDB_IDS.containsKey(name)) {
+        if (mount == null) {
             return toErrorResponse("Unknown mount: " + name);
+        } else {
+            mount.setTracking(true);
+            mountRepository.save(mount);
         }
-
-        if (mountRepository.existsByInstance(instance)) {
-            return toErrorResponse("Mount already exists with instance " + instance);
-        }
-
-        Mount mount = Mount.builder()
-                .id(XIVDB_IDS.get(name))
-                .name(name)
-                .instance(instance)
-                .build();
-        mountRepository.save(mount);
 
         loadMounts();
 
@@ -190,12 +196,14 @@ public class MountController {
             return toErrorResponse("Missing required parameter: id");
         }
 
-        if (!mountRepository.exists(id)) {
-            return toErrorResponse("Mount does not exist, unable to delete");
-        }
+        Mount mount = mountRepository.findOne(id);
 
-        mountLinkRepository.deleteByMountId(id);
-        mountRepository.delete(id);
+        if (mount == null) {
+            return toErrorResponse("Unknown mount: " + id);
+        } else {
+            mount.setTracking(false);
+            mountRepository.save(mount);
+        }
 
         loadMounts();
 
@@ -208,7 +216,7 @@ public class MountController {
             loadXivDBIds();
         }
 
-        Map<String, Mount> totalMounts = mountRepository.findAll().stream()
+        Map<String, Mount> totalMounts = mountRepository.findAllByTracking(true).stream()
                 .collect(Collectors.toMap(Mount::getName, mount -> mount));
 
         // Get the list of all mounts that each player has, either from database or website
@@ -378,5 +386,18 @@ public class MountController {
         String content = httpClient.get("https://api.xivdb.com/mount");
         List<Map<String, Object>> mounts = jsonConverter.toObject(content);
         mounts.forEach(mount -> XIVDB_IDS.put((String) mount.get("name"), ((Integer) mount.get("id")).longValue()));
+
+        List<String> existingMounts = mountRepository.findAll().stream()
+                .map(Mount::getName)
+                .collect(Collectors.toList());
+
+        List<Mount> newMounts = XIVDB_IDS.entrySet().stream()
+                .filter(entry -> !existingMounts.contains(entry.getKey()))
+                .map(entry -> Mount.builder()
+                        .name(entry.getKey())
+                        .build())
+                .collect(Collectors.toList());
+
+        mountRepository.save(newMounts);
     }
 }

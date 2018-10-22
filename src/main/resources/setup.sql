@@ -1,10 +1,32 @@
 use bale;
 
+drop table if exists mount_identifier;
+create table mount_identifier (
+  id int not null auto_increment,
+  name varchar(200),
+  primary key (id),
+  unique (name)
+);
+
+insert into mount_identifier (name) values ('Whistle');
+insert into mount_identifier (name) values ('Fife');
+
+drop table if exists trial;
+create table trial (
+  id int not null auto_increment,
+  name varchar(200),
+  boss varchar(200),
+  lodestone_id varchar(200),
+  loaded bool not null,
+  primary key (id),
+  unique (name)
+);
+
 drop table if exists mount;
 create table mount (
-  id int not null,
+  id int not null auto_increment,
   name varchar(200),
-  instance varchar(200),
+  tracking bool not null,
   primary key (id),
   unique (name)
 );
@@ -49,8 +71,9 @@ create table player (
 drop table if exists mount_link;
 create table mount_link (
   id int not null auto_increment,
-  player_id int,
-  mount_id int,
+  mount_id int not null default 0,
+  player_id int not null default 0,
+  trial_id int not null default 0,
   primary key (id)
 );
 
