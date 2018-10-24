@@ -1,6 +1,7 @@
 package com.dc.bale.controller;
 
 import com.dc.bale.component.HttpClient;
+import com.dc.bale.component.JsonConverter;
 import com.dc.bale.database.Config;
 import com.dc.bale.database.ConfigRepository;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
@@ -10,11 +11,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
-import org.apache.http.Header;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpPut;
-import org.apache.http.entity.StringEntity;
-import org.apache.http.message.BasicHeader;
+import org.apache.http.entity.ContentType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -23,18 +20,23 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.io.IOException;
-import java.net.URISyntaxException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 
 @RequestMapping("/domain")
 @RestController
 @RequiredArgsConstructor(onConstructor = @__(@Autowired))
 public class DomainNameController {
-    @NonNull private HttpClient httpClient;
-    @NonNull private ConfigRepository configRepository;
+    @NonNull
+    private HttpClient httpClient;
+    @NonNull
+    private ConfigRepository configRepository;
+    @NonNull
+    private JsonConverter jsonConverter;
+
     private String lastUpdated = "Never";
 
     @RequestMapping(method = RequestMethod.GET, produces = {MediaType.APPLICATION_JSON_VALUE})
@@ -45,36 +47,41 @@ public class DomainNameController {
     @Scheduled(fixedRate = 3600000)
     public void hasIPAddressChanged() throws IOException {
         String domain = "bahamutslegion.com";
-        HttpGet get = new HttpGet("https://api.godaddy.com/v1/domains/" + domain + "/records/A/@");
+        String url = "https://api.godaddy.com/v1/domains/" + domain + "/records/A/@";
         Config key = configRepository.findByName("domainKey");
         Config secret = configRepository.findByName("domainSecret");
 
-        if(key == null || secret == null) {
+        if (key == null || secret == null) {
             return;
         }
-        
-        String ssoKey = "sso-key " + key.getValue() + ":" + secret.getValue();
-        Header[] headers = {new BasicHeader("Authorization", ssoKey)};
-        get.setHeaders(headers);
-        String result = httpClient.execute(get);
-        ObjectMapper objectMapper = new ObjectMapper();
-        List<Record> records = objectMapper.readValue(result, new TypeReference<List<Record>>(){});
 
-        if(!records.isEmpty()) {
+        String ssoKey = "sso-key " + key.getValue() + ":" + secret.getValue();
+        Optional<String> response = httpClient.get(url, ssoKey);
+        if (!response.isPresent()) {
+            return;
+        }
+        String result = response.get();
+        ObjectMapper objectMapper = new ObjectMapper();
+        List<Record> records = objectMapper.readValue(result, new TypeReference<List<Record>>() {
+        });
+
+        if (!records.isEmpty()) {
             Record record = records.get(0);
             String registeredIpAddress = record.getData();
-            String currentIpAddress = httpClient.get("http://checkip.amazonaws.com").replace("\n", "");
+            Optional<String> ipResponse = httpClient.get("http://checkip.amazonaws.com");
+            if (!ipResponse.isPresent()) {
+                return;
+            }
+            String ip = ipResponse.get();
+            String currentIpAddress = ip.replace("\n", "");
 
-            if(!currentIpAddress.equals(registeredIpAddress)) {
+            if (!currentIpAddress.equals(registeredIpAddress)) {
                 record.setData(currentIpAddress);
                 List<Record> recordList = new ArrayList<>();
                 recordList.add(record);
                 String json = objectMapper.writeValueAsString(recordList);
-                HttpPut put = new HttpPut("https://api.godaddy.com/v1/domains/" + domain + "/records/A/@");
-                put.setHeaders(headers);
-                put.addHeader("Content-Type", "application/json");
-                put.setEntity(new StringEntity(json));
-                httpClient.execute(put);
+
+                httpClient.put(url, ContentType.APPLICATION_JSON, ssoKey, json);
 
                 SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm");
                 lastUpdated = sdf.format(new Date());

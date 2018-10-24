@@ -278,25 +278,25 @@ public class MountController {
             }
 
             String url = BASE_URL + player.getUrl();
-            try {
-                String content = httpClient.get(url);
-                Pattern pattern = Pattern.compile("<li><div class=\"character__item_icon.+?data-tooltip=\"(.+?)\".+?</li>");
-                Matcher matcher = pattern.matcher(content);
-                boolean modified = false;
+            Optional<String> response = httpClient.get(url);
+            if (!response.isPresent()) {
+                return;
+            }
+            String content = response.get();
+            Pattern pattern = Pattern.compile("<li><div class=\"character__item_icon.+?data-tooltip=\"(.+?)\".+?</li>");
+            Matcher matcher = pattern.matcher(content);
+            boolean modified = false;
 
-                while (matcher.find()) {
-                    String mount = matcher.group(1);
+            while (matcher.find()) {
+                String mount = matcher.group(1);
 
-                    if (!player.hasMount(mount) && player.addMount(totalMounts.get(mount))) {
-                        modified = true;
-                    }
+                if (!player.hasMount(mount) && player.addMount(totalMounts.get(mount))) {
+                    modified = true;
                 }
+            }
 
-                if (modified) {
-                    playerRepository.save(player);
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
+            if (modified) {
+                playerRepository.save(player);
             }
         }
     }
@@ -319,9 +319,13 @@ public class MountController {
         return 1;
     }
 
-    private List<Player> loadPlayerData(Map<String, Mount> totalMounts) throws IOException {
+    private List<Player> loadPlayerData(Map<String, Mount> totalMounts) {
         Config freeCompanyUrl = configRepository.findByName("freeCompanyUrl");
-        String content = httpClient.get(BASE_URL + freeCompanyUrl.getValue());
+        Optional<String> response = httpClient.get(BASE_URL + freeCompanyUrl.getValue());
+        if (!response.isPresent()) {
+            return Collections.emptyList();
+        }
+        String content = response.get();
 
         Map<String, Player> players = playerRepository.findAll().stream()
                 .collect(Collectors.toMap(Player::getName, player -> player));
@@ -332,7 +336,11 @@ public class MountController {
         for (int x = 1; x <= numPages; x++) {
             // First page is already loaded, don't load it again
             if (x > 1) {
-                content = httpClient.get(BASE_URL + freeCompanyUrl.getValue() + "?page=" + x);
+                Optional<String> nextPageResponse = httpClient.get(BASE_URL + freeCompanyUrl.getValue() + "?page=" + x);
+                if (!nextPageResponse.isPresent()) {
+                    return Collections.emptyList();
+                }
+                content = nextPageResponse.get();
             }
             Pattern pattern = Pattern.compile("<li class=\"entry\"><a href=\"(.+?)\".+?<p class=\"entry__name\">(.+?)</p>.+?</li>.+?</li>.+?</li>");
             Matcher matcher = pattern.matcher(content);
@@ -383,7 +391,11 @@ public class MountController {
     }
 
     private void loadXivDBIds() throws IOException {
-        String content = httpClient.get("https://api.xivdb.com/mount");
+        Optional<String> response = httpClient.get("https://api.xivdb.com/mount");
+        if (!response.isPresent()) {
+            return;
+        }
+        String content = response.get();
         List<Map<String, Object>> mounts = jsonConverter.toObject(content);
         mounts.forEach(mount -> XIVDB_IDS.put((String) mount.get("name"), ((Integer) mount.get("id")).longValue()));
 

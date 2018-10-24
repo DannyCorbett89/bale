@@ -15,20 +15,24 @@ import javax.mail.Session;
 import javax.mail.Transport;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
-import javax.naming.AuthenticationException;
-import java.io.IOException;
+import java.util.Optional;
 import java.util.Properties;
 
 @RequestMapping("/stream")
 @RestController
 @RequiredArgsConstructor(onConstructor = @__(@Autowired))
 public class StreamController {
-    @NonNull private HttpClient httpClient;
+    @NonNull
+    private HttpClient httpClient;
 
     @RequestMapping(method = RequestMethod.GET, produces = {MediaType.APPLICATION_JSON_VALUE})
-    public String notifyStream() throws IOException, javax.mail.MessagingException {
+    public String notifyStream() throws javax.mail.MessagingException {
         System.out.println("Motion detected, sending email");
-        String ip = httpClient.get("http://checkip.amazonaws.com/").replace("\n", "");
+        Optional<String> ipResponse = httpClient.get("http://checkip.amazonaws.com/");
+        if (!ipResponse.isPresent()) {
+            return "{}";
+        }
+        String ip = ipResponse.get().replace("\n", "");
         final String username = "dannycorbett890@gmail.com";
         final String password = "ptquklkfxlyozbvg";
 
@@ -40,6 +44,7 @@ public class StreamController {
 
         Session session = Session.getInstance(props,
                 new javax.mail.Authenticator() {
+                    @Override
                     protected PasswordAuthentication getPasswordAuthentication() {
                         return new PasswordAuthentication(username, password);
                     }

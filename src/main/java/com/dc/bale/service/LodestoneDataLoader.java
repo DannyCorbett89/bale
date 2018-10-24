@@ -10,9 +10,9 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -48,24 +48,29 @@ public class LodestoneDataLoader {
     }
 
     @PostConstruct
-    private void loadAllTrials() throws IOException {
+    private void loadAllTrials() {
         loadTrials(false);
     }
 
     @Scheduled(fixedRate = REFRESH_INTERVAL, initialDelay = REFRESH_INTERVAL)
-    private void loadLatestTrials() throws IOException {
+    private void loadLatestTrials() {
         loadTrials(true);
     }
 
-    private void loadTrials(boolean latestPatch) throws IOException {
+    private void loadTrials(boolean latestPatch) {
         String trialsUrl = DUTY_URL + "/?category2=4";
 
         if (latestPatch) {
             trialsUrl += "&patch=latest";
         }
 
-        String content = httpClient.get(trialsUrl);
+        Optional<String> response = httpClient.get(trialsUrl);
 
+        if (!response.isPresent()) {
+            return;
+        }
+
+        String content = response.get();
         Set<String> trialNames = trialRepository.findAll().stream()
                 .map(Trial::getName)
                 .collect(Collectors.toSet());
@@ -74,7 +79,11 @@ public class LodestoneDataLoader {
         for (int x = 1; x <= numPages; x++) {
             // First page is already loaded, don't load it again
             if (x > 1) {
-                content = httpClient.get(trialsUrl + "&page=" + x);
+                Optional<String> nextPageResponse = httpClient.get(trialsUrl + "&page=" + x);
+                if (!nextPageResponse.isPresent()) {
+                    return;
+                }
+                content = nextPageResponse.get();
             }
 
             Pattern pattern = Pattern.compile("<a href=\"/lodestone/playguide/db/duty/(.+?)/.+?>(?:(.+? \\(Extreme\\)|(The Minstrel's Ballad: .+?)))</a>");
@@ -112,7 +121,11 @@ public class LodestoneDataLoader {
         public void run() {
             String url = DUTY_URL + "/" + trial.getLodestoneId();
             try {
-                String content = httpClient.get(url);
+                Optional<String> response = httpClient.get(url);
+                if (!response.isPresent()) {
+                    return;
+                }
+                String content = response.get();
                 Pattern pattern = Pattern.compile("<li class=\"boss.+?class=\"db_popup\"><strong>(.+?)</strong>", Pattern.DOTALL);
                 Matcher matcher = pattern.matcher(content);
                 Trial oldValues = trial.toBuilder().build();
