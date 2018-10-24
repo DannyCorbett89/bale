@@ -120,13 +120,43 @@ class AddPlayer extends React.Component {
                         </Select>
                     </DialogContent>
                     <DialogActions>
-                        <AddButton url={"/addPlayer?playerId=" + this.state.value} message="Adding Player..."/>
+                        <AddPlayerButton player={this.state.value}/>
                         <Button onClick={this.handleClose} color="primary">
                             Close
                         </Button>
                     </DialogActions>
                 </Dialog>
             </div>
+        );
+    }
+}
+
+class AddPlayerButton extends React.Component {
+    constructor(props) {
+        super(props);
+        this.state = {
+            disabled: false,
+            text: "Add"
+        };
+    }
+
+    addPlayer() {
+        this.setState({
+            disabled: true,
+            text: "Adding Player..."
+        });
+        fetch(backendUrl + "/addPlayer?playerId=" + this.props.player)
+            .then(() => {
+                window.location.reload();
+            });
+    }
+
+    render() {
+        return (
+            <Button id={this.props.player}
+                    color="primary"
+                    onClick={() => this.addPlayer(this.props.player)}
+                    disabled={this.state.disabled}>{this.state.text}</Button>
         );
     }
 }
@@ -199,7 +229,7 @@ class AddMount extends React.Component {
                     </Select>
                 </DialogContent>
                 <DialogActions>
-                    <AddButton url={"/addMount?name=" + this.state.mountName} message="Adding Mount..."/>
+                    <AddMountButton mountName={this.state.mountName}/>
                     <Button onClick={this.handleClose} color="primary">
                         Close
                     </Button>
@@ -216,22 +246,21 @@ class AddMount extends React.Component {
     }
 }
 
-class AddButton extends React.Component {
-    constructor(props) {
-        super(props);
+class AddMountButton extends React.Component {
+    constructor() {
+        super();
         this.state = {
             disabled: false,
-            text: "Add",
-            url: props.url
+            text: "Add"
         };
     }
 
-    addItem() {
+    addMount() {
         this.setState({
             disabled: true,
-            text: this.props.message
+            text: "Adding Mount..."
         });
-        fetch(backendUrl + this.state.url)
+        fetch(backendUrl + "/addMount?name=" + this.props.mountName)
             .then(() => {
                 window.location.reload();
             });
@@ -239,10 +268,10 @@ class AddButton extends React.Component {
 
     render() {
         return (
-            <Button
-                color="primary"
-                onClick={() => this.addItem()}
-                disabled={this.state.disabled}>{this.state.text}</Button>
+            <Button id={this.props.mountName}
+                    color="primary"
+                    onClick={() => this.addMount(this.props.mountName)}
+                    disabled={this.state.disabled}>{this.state.text}</Button>
         );
     }
 }
