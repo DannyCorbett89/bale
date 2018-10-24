@@ -1,0 +1,1 @@
+export const backendUrl = 'http://www.bahamutslegion.com:8081';

@@ -1,3 +1,4 @@
+import {backendUrl} from "./config";
 import React from 'react';
 import ReactDOM from 'react-dom';
 import './index.css';
@@ -67,7 +68,7 @@ class AddPlayer extends React.Component {
     }
 
     componentWillMount() {
-        fetch('http://www.bahamutslegion.com:8081/players')
+        fetch(backendUrl + '/players')
             .then(results => {
                 return results.json();
             })
@@ -136,7 +137,7 @@ class AddPlayerButton extends React.Component {
             disabled: true,
             text: "Adding Player..."
         });
-        fetch("http://www.bahamutslegion.com:8081/addPlayer?playerId=" + this.props.player)
+        fetch(backendUrl + "/addPlayer?playerId=" + this.props.player)
             .then(() => {
                 window.location.reload();
             });
@@ -164,7 +165,7 @@ class AddMount extends React.Component {
     }
 
     componentWillMount() {
-        fetch('http://www.bahamutslegion.com:8081/listAvailableMounts')
+        fetch(backendUrl + '/listAvailableMounts')
             .then(results => {
                 return results.json();
             })
@@ -251,7 +252,7 @@ class AddMountButton extends React.Component {
             disabled: true,
             text: "Adding Mount..."
         });
-        fetch("http://www.bahamutslegion.com:8081/addMount?name=" + this.props.mountName + "&instance=" + this.props.instanceName)
+        fetch(backendUrl + "/addMount?name=" + this.props.mountName + "&instance=" + this.props.instanceName)
             .then(() => {
                 window.location.reload();
             });
@@ -283,7 +284,7 @@ class RemovePlayerButton extends React.Component {
             disabled: true,
             messageWindowIsOpen: true
         });
-        fetch("http://www.bahamutslegion.com:8081/removePlayer?playerName=" + name)
+        fetch(backendUrl + "/removePlayer?playerName=" + name)
             .then(() => {
                 window.location.reload();
             });
@@ -319,7 +320,7 @@ class RemoveMountButton extends React.Component {
             disabled: true,
             messageWindowIsOpen: true
         });
-        fetch("http://www.bahamutslegion.com:8081/removeMount?id=" + mount.id)
+        fetch(backendUrl + "/removeMount?id=" + mount.id)
             .then(() => {
                 window.location.reload();
             });
@@ -360,7 +361,7 @@ class Mounts extends React.Component {
 
 
     componentWillMount() {
-        fetch('http://www.bahamutslegion.com:8081/listMounts')
+        fetch(backendUrl + '/listMounts')
             .then(results => {
                 return results.json();
             })
