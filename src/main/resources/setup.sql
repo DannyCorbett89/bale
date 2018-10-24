@@ -77,35 +77,6 @@ create table mount_link (
   primary key (id)
 );
 
-drop table if exists music_key_mapping;
-create table music_key_mapping (
-  id int not null auto_increment,
-  name varchar(200) not null,
-  c varchar(5) not null,
-  c_sharp varchar(5) not null,
-  d varchar(5) not null,
-  e_flat varchar(5) not null,
-  e varchar(5) not null,
-  f varchar(5) not null,
-  f_sharp varchar(5) not null,
-  g varchar(5) not null,
-  g_sharp varchar(5) not null,
-  a varchar(5) not null,
-  b_flat varchar(5) not null,
-  b varchar(5) not null,
-  octave_up varchar(5) not null,
-  octave_down varchar(5) not null,
-  primary key (id)
-);
-
-insert into music_key_mapping (name, c, c_sharp, d, e_flat, e, f, f_sharp, g, g_sharp, a, b_flat, b, octave_up, octave_down)
-values ('Default Controller', 'L', 'R1+L', 'U', 'R1+U', 'R', 'D', 'R1+D', 'SQ',
-                              'R1+SQ', 'TR', 'R1+TR', 'O', 'R2', 'L2');
-
-insert into music_key_mapping (name, c, c_sharp, d, e_flat, e, f, f_sharp, g, g_sharp, a, b_flat, b, octave_up, octave_down)
-values ('Default Keyboard', 'Q', '2', 'W', '3', 'E', 'R', '5', 'T',
-                              '6', 'Y', '7', 'U', 'SHIFT', 'CTRL');
-
 drop table if exists config;
 create table config (
   id int not null auto_increment,
