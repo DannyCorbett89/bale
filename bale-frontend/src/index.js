@@ -25,7 +25,7 @@ import TableBody from "@material-ui/core/TableBody";
 
 class MessageWindow extends React.Component {
     constructor(props) {
-        super();
+        super(props);
         this.state = {
             text: props.text,
             onClick: props.onClick
@@ -38,6 +38,18 @@ class MessageWindow extends React.Component {
             return null;
         }
 
+        let button;
+
+        if (this.state.onClick != null) {
+            button = <DialogActions>
+                <Button onClick={this.state.onClick} color="primary">
+                    Close
+                </Button>
+            </DialogActions>;
+        } else {
+            button = <div/>;
+        }
+
         return (
             <Dialog
                 open="true"
@@ -46,19 +58,15 @@ class MessageWindow extends React.Component {
                 aria-describedby="alert-dialog-description"
             >
                 <DialogTitle id="alert-dialog-title">{this.state.text}</DialogTitle>
-                <DialogActions>
-                    <Button onClick={this.state.onClick} color="primary">
-                        Close
-                    </Button>
-                </DialogActions>
+                {button}
             </Dialog>
         );
     }
 }
 
 class AddPlayer extends React.Component {
-    constructor() {
-        super();
+    constructor(props) {
+        super(props);
         this.state = {
             open: false,
             players: [],
@@ -112,7 +120,7 @@ class AddPlayer extends React.Component {
                         </Select>
                     </DialogContent>
                     <DialogActions>
-                        <AddPlayerButton player={this.state.value}/>
+                        <AddButton url={"/addPlayer?playerId=" + this.state.value} message="Adding Player..."/>
                         <Button onClick={this.handleClose} color="primary">
                             Close
                         </Button>
@@ -123,39 +131,9 @@ class AddPlayer extends React.Component {
     }
 }
 
-class AddPlayerButton extends React.Component {
-    constructor(props) {
-        super();
-        this.state = {
-            disabled: false,
-            text: "Add"
-        };
-    }
-
-    addPlayer() {
-        this.setState({
-            disabled: true,
-            text: "Adding Player..."
-        });
-        fetch(backendUrl + "/addPlayer?playerId=" + this.props.player)
-            .then(() => {
-                window.location.reload();
-            });
-    }
-
-    render() {
-        return (
-            <Button id={this.props.player}
-                    color="primary"
-                    onClick={() => this.addPlayer(this.props.player)}
-                    disabled={this.state.disabled}>{this.state.text}</Button>
-        );
-    }
-}
-
 class AddMount extends React.Component {
-    constructor() {
-        super();
+    constructor(props) {
+        super(props);
         this.state = {
             open: false,
             mounts: [],
@@ -221,7 +199,7 @@ class AddMount extends React.Component {
                     </Select>
                 </DialogContent>
                 <DialogActions>
-                    <AddMountButton mountName={this.state.mountName}/>
+                    <AddButton url={"/addMount?name=" + this.state.mountName} message="Adding Mount..."/>
                     <Button onClick={this.handleClose} color="primary">
                         Close
                     </Button>
@@ -238,21 +216,22 @@ class AddMount extends React.Component {
     }
 }
 
-class AddMountButton extends React.Component {
-    constructor() {
-        super();
+class AddButton extends React.Component {
+    constructor(props) {
+        super(props);
         this.state = {
             disabled: false,
-            text: "Add"
+            text: "Add",
+            url: props.url
         };
     }
 
-    addMount() {
+    addItem() {
         this.setState({
             disabled: true,
-            text: "Adding Mount..."
+            text: this.props.message
         });
-        fetch(backendUrl + "/addMount?name=" + this.props.mountName + "&instance=" + this.props.instanceName)
+        fetch(backendUrl + this.state.url)
             .then(() => {
                 window.location.reload();
             });
@@ -260,17 +239,17 @@ class AddMountButton extends React.Component {
 
     render() {
         return (
-            <Button id={this.props.mountName}
-                    color="primary"
-                    onClick={() => this.addMount(this.props.mountName)}
-                    disabled={this.state.disabled}>{this.state.text}</Button>
+            <Button
+                color="primary"
+                onClick={() => this.addItem()}
+                disabled={this.state.disabled}>{this.state.text}</Button>
         );
     }
 }
 
 class RemovePlayerButton extends React.Component {
     constructor(props) {
-        super();
+        super(props);
         this.state = {
             disabled: false,
             text: "Remove",
@@ -306,7 +285,7 @@ class RemovePlayerButton extends React.Component {
 
 class RemoveMountButton extends React.Component {
     constructor(props) {
-        super();
+        super(props);
         this.state = {
             disabled: false,
             text: "Remove",
@@ -350,8 +329,8 @@ const CustomTableCell = withStyles(theme => ({
 }))(TableCell);
 
 class Mounts extends React.Component {
-    constructor() {
-        super();
+    constructor(props) {
+        super(props);
         this.state = {
             updated: null,
             columns: null,
