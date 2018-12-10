@@ -28,4 +28,8 @@ public class JsonConverter {
         return mapper.readValue(json, new TypeReference<T>() {
         });
     }
+
+    public <T> T toObject(String json, Class<T> type) throws IOException {
+        return mapper.readValue(json, type);
+    }
 }

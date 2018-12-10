@@ -1,7 +1,6 @@
 package com.dc.bale.service;
 
 import com.dc.bale.component.HttpClient;
-import com.dc.bale.component.JsonConverter;
 import com.dc.bale.database.*;
 import com.dc.bale.exception.MountException;
 import com.dc.bale.model.AvailableMount;
@@ -10,11 +9,12 @@ import com.dc.bale.model.PlayerRS;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
-import java.io.IOException;
+import javax.annotation.PostConstruct;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.regex.Matcher;
@@ -24,6 +24,8 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor(onConstructor = @__(@Autowired))
 public class MountTracker {
+    private static final Logger LOG = Logger.getLogger(MountTracker.class.getName());
+
     private static final String BASE_URL = "https://na.finalfantasyxiv.com";
 
     @NonNull
@@ -38,11 +40,8 @@ public class MountTracker {
     private TrialRepository trialRepository;
     @NonNull
     private ConfigRepository configRepository;
-    @NonNull
-    private JsonConverter jsonConverter;
 
     private Map<String, List<Mount>> playerMounts = new HashMap<>();
-    private Map<String, Long> xivdbIds = new HashMap<>();
     private String lastUpdated = "Never";
 
     public String getLastUpdated() {
@@ -74,7 +73,7 @@ public class MountTracker {
         return players;
     }
 
-    public void addMount(String name) throws IOException, MountException {
+    public void addMount(String name) throws MountException {
         Mount mount = mountRepository.findByName(name);
 
         if (mount == null) {
@@ -87,7 +86,7 @@ public class MountTracker {
         loadMounts();
     }
 
-    public void removeMount(long id) throws IOException, MountException {
+    public void removeMount(long id) throws MountException {
         Mount mount = mountRepository.findOne(id);
 
         if (mount == null) {
@@ -100,11 +99,10 @@ public class MountTracker {
         loadMounts();
     }
 
-    @Scheduled(fixedRate = 3600000)
-    public void loadMounts() throws IOException {
-        if (xivdbIds.isEmpty()) {
-            loadXivDBIds();
-        }
+    @PostConstruct
+    @Scheduled(cron = "0 0 * * * *")
+    public void loadMounts() {
+        LOG.info("Loading Mounts");
 
         Map<String, Mount> totalMounts = mountRepository.findAllByTracking(true).stream()
                 .collect(Collectors.toMap(Mount::getName, mount -> mount));
@@ -219,30 +217,6 @@ public class MountTracker {
         }
 
         return 1;
-    }
-
-    // TODO: Scrape raids as well as trials. Then remove this
-    private void loadXivDBIds() throws IOException {
-        Optional<String> response = httpClient.get("https://api.xivdb.com/mount");
-        if (!response.isPresent()) {
-            return;
-        }
-        String content = response.get();
-        List<Map<String, Object>> mounts = jsonConverter.toObject(content);
-        mounts.forEach(mount -> xivdbIds.put((String) mount.get("name"), ((Integer) mount.get("id")).longValue()));
-
-        List<String> existingMounts = mountRepository.findAll().stream()
-                .map(Mount::getName)
-                .collect(Collectors.toList());
-
-        List<Mount> newMounts = xivdbIds.entrySet().stream()
-                .filter(entry -> !existingMounts.contains(entry.getKey()))
-                .map(entry -> Mount.builder()
-                        .name(entry.getKey())
-                        .build())
-                .collect(Collectors.toList());
-
-        mountRepository.save(newMounts);
     }
 
     private String getInstance(Mount mount) {

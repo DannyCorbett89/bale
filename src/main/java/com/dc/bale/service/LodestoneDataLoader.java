@@ -5,11 +5,13 @@ import com.dc.bale.database.*;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -21,6 +23,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor(onConstructor = @__(@Autowired))
 public class LodestoneDataLoader {
+    private static final Logger LOG = Logger.getLogger(LodestoneDataLoader.class.getName());
     private static final String BASE_URL = "https://na.finalfantasyxiv.com/lodestone";
     private static final String DB_URL = BASE_URL + "/playguide/db";
     private static final String DUTY_URL = DB_URL + "/duty";
@@ -35,6 +38,8 @@ public class LodestoneDataLoader {
     private TrialRepository trialRepository;
     @NonNull
     private MountIdentifierRepository mountIdentifierRepository;
+    @NonNull
+    private XivdbService xivdbService;
 
     private String mountIdentifiersRegex;
 
@@ -48,16 +53,17 @@ public class LodestoneDataLoader {
     }
 
     @PostConstruct
-    private void loadAllTrials() {
+    private void loadAllTrials() throws IOException {
         loadTrials(false);
     }
 
-    @Scheduled(fixedRate = REFRESH_INTERVAL, initialDelay = REFRESH_INTERVAL)
-    private void loadLatestTrials() {
+    @Scheduled(cron = "0 10 * * * *")
+    private void loadLatestTrials() throws IOException {
         loadTrials(true);
     }
 
-    private void loadTrials(boolean latestPatch) {
+    private void loadTrials(boolean latestPatch) throws IOException {
+        LOG.info("Loading " + (latestPatch ? "latest" : "all") + " trials");
         String trialsUrl = DUTY_URL + "/?category2=4";
 
         if (latestPatch) {
@@ -107,6 +113,8 @@ public class LodestoneDataLoader {
                 }
             }
         }
+
+        xivdbService.loadXivDBIds();
     }
 
     public class TrialLoader extends Thread {
@@ -129,11 +137,14 @@ public class LodestoneDataLoader {
                 Pattern pattern = Pattern.compile("<li class=\"boss.+?class=\"db_popup\"><strong>(.+?)</strong>", Pattern.DOTALL);
                 Matcher matcher = pattern.matcher(content);
                 Trial oldValues = trial.toBuilder().build();
+                String boss;
 
                 if (matcher.find()) {
-                    String boss = matcher.group(1);
-                    trial.setBoss(boss);
+                    boss = matcher.group(1);
+                } else {
+                    boss = xivdbService.getTrialBossName(trial);
                 }
+                trial.setBoss(boss);
 
                 Pattern mountPattern = Pattern.compile("<a href=\"/lodestone/playguide/db/item/.+?>(.+?) " + mountIdentifiersRegex + "</a>");
                 Matcher mountMatcher = mountPattern.matcher(content);
