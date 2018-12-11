@@ -15,7 +15,6 @@ import javax.mail.Session;
 import javax.mail.Transport;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
-import java.util.Optional;
 import java.util.Properties;
 
 @RequestMapping("/stream")
@@ -28,11 +27,10 @@ public class StreamController {
     @RequestMapping(method = RequestMethod.GET, produces = {MediaType.APPLICATION_JSON_VALUE})
     public String notifyStream() throws javax.mail.MessagingException {
         System.out.println("Motion detected, sending email");
-        Optional<String> ipResponse = httpClient.get("http://checkip.amazonaws.com/");
-        if (!ipResponse.isPresent()) {
+        String ip = httpClient.get("http://checkip.amazonaws.com/").replace("\n", "");
+        if (ip.isEmpty()) {
             return "{}";
         }
-        String ip = ipResponse.get().replace("\n", "");
         final String username = "dannycorbett890@gmail.com";
         final String password = "ptquklkfxlyozbvg";
 

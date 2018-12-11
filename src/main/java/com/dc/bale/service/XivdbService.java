@@ -16,7 +16,6 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -36,11 +35,7 @@ public class XivdbService {
 
     // TODO: Scrape raids as well as trials. Then remove this
     public void loadXivDBIds() throws IOException {
-        Optional<String> response = httpClient.get(XIVDB_BASE_URL + "/mount");
-        if (!response.isPresent()) {
-            return;
-        }
-        String content = response.get();
+        String content = httpClient.get(XIVDB_BASE_URL + "/mount");
         List<Map<String, Object>> mounts = jsonConverter.toObject(content);
         mounts.forEach(mount -> xivdbIds.put((String) mount.get("name"), ((Integer) mount.get("id")).longValue()));
 
@@ -60,24 +55,18 @@ public class XivdbService {
 
     public String getTrialBossName(Trial trial) throws IOException {
         if (INSTANCE_IDS.isEmpty()) {
-            Optional<String> xivdbResponse = httpClient.get(XIVDB_BASE_URL + "/instance");
-            if (xivdbResponse.isPresent()) {
-                String xivdbContent = xivdbResponse.get();
-                List<Map<String, Object>> instances = jsonConverter.toObject(xivdbContent);
-                instances.forEach(mount -> INSTANCE_IDS.put((String) mount.get("name"), ((Integer) mount.get("id")).longValue()));
-            }
+            String xivdbContent = httpClient.get(XIVDB_BASE_URL + "/instance");
+            List<Map<String, Object>> instances = jsonConverter.toObject(xivdbContent);
+            instances.forEach(mount -> INSTANCE_IDS.put((String) mount.get("name"), ((Integer) mount.get("id")).longValue()));
         }
 
-        Optional<String> xivdbResponse = httpClient.get(XIVDB_BASE_URL + "/instance/" + INSTANCE_IDS.get(trial.getName()));
-        if (xivdbResponse.isPresent()) {
-            String xivdbContent = xivdbResponse.get();
-            XivdbResponse trialInfo = jsonConverter.toObject(xivdbContent, XivdbResponse.class);
-            List<Enemy> enemies = trialInfo.getEnemies();
+        String xivdbContent = httpClient.get(XIVDB_BASE_URL + "/instance/" + INSTANCE_IDS.get(trial.getName()));
+        XivdbResponse trialInfo = jsonConverter.toObject(xivdbContent, XivdbResponse.class);
+        List<Enemy> enemies = trialInfo.getEnemies();
 
-            if (!enemies.isEmpty()) {
-                Enemy enemy = enemies.get(0);
-                return enemy.getName();
-            }
+        if (!enemies.isEmpty()) {
+            Enemy enemy = enemies.get(0);
+            return enemy.getName();
         }
 
         return null;

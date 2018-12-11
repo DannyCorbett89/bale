@@ -14,7 +14,6 @@ import javax.annotation.PostConstruct;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -70,26 +69,17 @@ public class LodestoneDataLoader {
             trialsUrl += "&patch=latest";
         }
 
-        Optional<String> response = httpClient.get(trialsUrl);
-
-        if (!response.isPresent()) {
-            return;
-        }
-
-        String content = response.get();
+        String content = httpClient.get(trialsUrl);
         Set<String> trialNames = trialRepository.findAll().stream()
                 .map(Trial::getName)
                 .collect(Collectors.toSet());
         int numPages = getNumPagesDB(content, trialsUrl);
+        List<TrialLoader> loaders = new ArrayList<>();
 
         for (int x = 1; x <= numPages; x++) {
             // First page is already loaded, don't load it again
             if (x > 1) {
-                Optional<String> nextPageResponse = httpClient.get(trialsUrl + "&page=" + x);
-                if (!nextPageResponse.isPresent()) {
-                    return;
-                }
-                content = nextPageResponse.get();
+                content = httpClient.get(trialsUrl + "&page=" + x);
             }
 
             Pattern pattern = Pattern.compile("<a href=\"/lodestone/playguide/db/duty/(.+?)/.+?>(?:(.+? \\(Extreme\\)|(The Minstrel's Ballad: .+?)))</a>");
@@ -109,8 +99,17 @@ public class LodestoneDataLoader {
                             .build());
 
                     TrialLoader loader = new TrialLoader(trial);
-                    loader.run();
+                    loaders.add(loader);
+                    loader.start();
                 }
+            }
+        }
+
+        for (TrialLoader loader : loaders) {
+            try {
+                loader.join();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
             }
         }
 
@@ -129,11 +128,7 @@ public class LodestoneDataLoader {
         public void run() {
             String url = DUTY_URL + "/" + trial.getLodestoneId();
             try {
-                Optional<String> response = httpClient.get(url);
-                if (!response.isPresent()) {
-                    return;
-                }
-                String content = response.get();
+                String content = httpClient.get(url);
                 Pattern pattern = Pattern.compile("<li class=\"boss.+?class=\"db_popup\"><strong>(.+?)</strong>", Pattern.DOTALL);
                 Matcher matcher = pattern.matcher(content);
                 Trial oldValues = trial.toBuilder().build();
@@ -178,6 +173,8 @@ public class LodestoneDataLoader {
                 if (!trial.equals(oldValues)) {
                     trialRepository.save(trial);
                 }
+
+                LOG.info("Loaded " + trial.getName());
             } catch (Exception e) {
                 e.printStackTrace();
             }
