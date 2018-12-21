@@ -10,8 +10,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.http.entity.ContentType;
-import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -26,12 +26,11 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
+@Slf4j
 @RequestMapping("/domain")
 @RestController
 @RequiredArgsConstructor(onConstructor = @__(@Autowired))
 public class DomainNameController {
-    private static final Logger LOG = Logger.getLogger(DomainNameController.class.getName());
-
     @NonNull
     private HttpClient httpClient;
     @NonNull
@@ -53,7 +52,7 @@ public class DomainNameController {
         Config secret = configRepository.findByName("domainSecret");
 
         if (key == null || secret == null) {
-            LOG.info("Key/Secret empty, unable to check IP");
+            log.info("Key/Secret empty, unable to check IP");
             return;
         }
 
@@ -69,7 +68,7 @@ public class DomainNameController {
             String currentIpAddress = httpClient.get("http://checkip.amazonaws.com").replace("\n", "");
 
             if (!currentIpAddress.equals(registeredIpAddress)) {
-                LOG.info("Current IP [" + currentIpAddress + "] does not match website IP [" + registeredIpAddress + "], updating");
+                log.info("Current IP [" + currentIpAddress + "] does not match website IP [" + registeredIpAddress + "], updating");
                 record.setData(currentIpAddress);
                 List<Record> recordList = new ArrayList<>();
                 recordList.add(record);

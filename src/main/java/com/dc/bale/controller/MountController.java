@@ -1,6 +1,8 @@
 package com.dc.bale.controller;
 
 import com.dc.bale.component.JsonConverter;
+import com.dc.bale.database.Mount;
+import com.dc.bale.database.Player;
 import com.dc.bale.exception.MountException;
 import com.dc.bale.exception.PlayerException;
 import com.dc.bale.model.Response;
@@ -9,6 +11,7 @@ import com.dc.bale.service.PlayerService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -17,9 +20,11 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.transaction.Transactional;
 import java.io.IOException;
 
+@Slf4j
 @RequestMapping("/")
 @RestController
 @RequiredArgsConstructor(onConstructor = @__(@Autowired))
@@ -56,9 +61,10 @@ public class MountController {
     }
 
     @RequestMapping(value = "/addPlayer", method = RequestMethod.GET, produces = {MediaType.APPLICATION_JSON_VALUE})
-    public ResponseEntity<String> addPlayer(@RequestParam("playerId") long playerId) {
+    public ResponseEntity<String> addPlayer(@RequestParam("playerId") long playerId, HttpServletRequest request) {
         try {
-            playerService.addPlayer(playerId);
+            Player player = playerService.addPlayer(playerId);
+            log.info("[{}] Added player: {}", request.getLocalAddr(), player.getName());
             return toResponse(StatusResponse.success());
         } catch (Exception e) {
             return toErrorResponse(e.getLocalizedMessage());
@@ -66,9 +72,10 @@ public class MountController {
     }
 
     @RequestMapping(value = "/removePlayer", method = RequestMethod.GET, produces = {MediaType.APPLICATION_JSON_VALUE})
-    public ResponseEntity<String> removePlayer(@RequestParam(value = "playerName") String playerName) {
+    public ResponseEntity<String> removePlayer(@RequestParam(value = "playerName") String playerName, HttpServletRequest request) {
         try {
             playerService.removePlayer(playerName);
+            log.info("[{}] Removed player: {}", request.getRemoteAddr(), playerName);
             return toResponse(StatusResponse.success());
         } catch (PlayerException e) {
             return toErrorResponse(e.getLocalizedMessage());
@@ -76,10 +83,12 @@ public class MountController {
     }
 
     @RequestMapping(value = "/addMount", method = RequestMethod.GET, produces = {MediaType.APPLICATION_JSON_VALUE})
-    public ResponseEntity<String> addMount(@RequestParam("name") String name) throws IOException {
+    public ResponseEntity<String> addMount(@RequestParam("name") String name, HttpServletRequest request) throws IOException {
         if (name == null || name.isEmpty()) {
             return toErrorResponse("Missing required parameter: name");
         }
+
+        log.info("[{}] Added mount: {}", request.getRemoteAddr(), name);
 
         try {
             mountTracker.addMount(name);
@@ -91,13 +100,14 @@ public class MountController {
 
     @Transactional
     @RequestMapping(value = "/removeMount", method = RequestMethod.GET, produces = {MediaType.APPLICATION_JSON_VALUE})
-    public ResponseEntity<String> removeMount(@RequestParam("id") long id) throws IOException {
+    public ResponseEntity<String> removeMount(@RequestParam("id") long id, HttpServletRequest request) throws IOException {
         if (id == 0) {
             return toErrorResponse("Missing required parameter: id");
         }
 
         try {
-            mountTracker.removeMount(id);
+            Mount mount = mountTracker.removeMount(id);
+            log.info("[{}] Removed mount: {}", request.getRemoteAddr(), mount.getName());
             return toResponse(StatusResponse.success());
         } catch (MountException e) {
             return toErrorResponse(e.getMessage());

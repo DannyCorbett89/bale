@@ -8,8 +8,8 @@ import com.dc.bale.model.MountRS;
 import com.dc.bale.model.PlayerRS;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -21,11 +21,10 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor(onConstructor = @__(@Autowired))
 public class MountTracker {
-    private static final Logger LOG = Logger.getLogger(MountTracker.class.getName());
-
     private static final String BASE_URL = "https://na.finalfantasyxiv.com";
 
     @NonNull
@@ -86,7 +85,7 @@ public class MountTracker {
         loadMounts();
     }
 
-    public void removeMount(long id) throws MountException {
+    public Mount removeMount(long id) throws MountException {
         Mount mount = mountRepository.findOne(id);
 
         if (mount == null) {
@@ -97,12 +96,14 @@ public class MountTracker {
         }
 
         loadMounts();
+
+        return mount;
     }
 
     @PostConstruct
     @Scheduled(cron = "0 0 * * * *")
     public void loadMounts() {
-        LOG.info("Loading Mounts");
+        log.info("Loading Mounts");
 
         Map<String, Mount> totalMounts = mountRepository.findAllByTracking(true).stream()
                 .collect(Collectors.toMap(Mount::getName, mount -> mount));

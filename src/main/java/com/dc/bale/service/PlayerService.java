@@ -18,12 +18,14 @@ public class PlayerService {
     @NonNull
     private MountTracker mountTracker;
 
-    public void addPlayer(long playerId) {
+    public Player addPlayer(long playerId) {
         Player player = playerRepository.findOne(playerId);
         player.setTracking(true);
         player = playerRepository.save(player);
 
         mountTracker.trackPlayer(player);
+
+        return player;
     }
 
     public void removePlayer(String playerName) throws PlayerException {

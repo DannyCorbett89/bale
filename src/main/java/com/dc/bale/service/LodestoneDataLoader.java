@@ -4,8 +4,8 @@ import com.dc.bale.component.HttpClient;
 import com.dc.bale.database.*;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -19,10 +19,10 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor(onConstructor = @__(@Autowired))
 public class LodestoneDataLoader {
-    private static final Logger LOG = Logger.getLogger(LodestoneDataLoader.class.getName());
     private static final String BASE_URL = "https://na.finalfantasyxiv.com/lodestone";
     private static final String DB_URL = BASE_URL + "/playguide/db";
     private static final String DUTY_URL = DB_URL + "/duty";
@@ -62,7 +62,7 @@ public class LodestoneDataLoader {
     }
 
     private void loadTrials(boolean latestPatch) throws IOException {
-        LOG.info("Loading " + (latestPatch ? "latest" : "all") + " trials");
+        log.info("Loading " + (latestPatch ? "latest" : "all") + " trials");
         String trialsUrl = DUTY_URL + "/?category2=4";
 
         if (latestPatch) {
@@ -174,7 +174,7 @@ public class LodestoneDataLoader {
                     trialRepository.save(trial);
                 }
 
-                LOG.info("Loaded " + trial.getName());
+                log.info("Loaded " + trial.getName());
             } catch (Exception e) {
                 e.printStackTrace();
             }
