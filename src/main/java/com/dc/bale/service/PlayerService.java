@@ -41,7 +41,7 @@ public class PlayerService {
         }
     }
 
-    public List<Player> listPlayers() {
-        return playerRepository.findByTrackingFalseOrderByName();
+    public List<Player> listPlayers(List<Long> rankIds) {
+        return playerRepository.findByTrackingFalseAndRankIdIsInOrderByName(rankIds);
     }
 }

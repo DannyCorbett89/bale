@@ -1,6 +1,7 @@
 package com.dc.bale.controller;
 
 import com.dc.bale.component.JsonConverter;
+import com.dc.bale.database.FcRank;
 import com.dc.bale.database.Mount;
 import com.dc.bale.database.Player;
 import com.dc.bale.exception.MountException;
@@ -8,6 +9,7 @@ import com.dc.bale.exception.PlayerException;
 import com.dc.bale.model.Response;
 import com.dc.bale.service.MountTracker;
 import com.dc.bale.service.PlayerService;
+import com.dc.bale.service.RankService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
@@ -15,14 +17,15 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.transaction.Transactional;
 import java.io.IOException;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Slf4j
 @RequestMapping("/")
@@ -35,14 +38,34 @@ public class MountController {
     private MountTracker mountTracker;
     @NonNull
     private PlayerService playerService;
+    @NonNull
+    private RankService rankService;
 
     @RequestMapping(value = "/players", method = RequestMethod.GET, produces = {MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<String> listPlayers() {
-        return toResponse(playerService.listPlayers());
+        List<Long> rankIds = rankService.listEnabledRanks().stream()
+                .map(FcRank::getId)
+                .collect(Collectors.toList());
+        List<Player> players = playerService.listPlayers(rankIds);
+        return toResponse(players);
+    }
+
+    @RequestMapping(value = "/ranks", method = RequestMethod.GET, produces = {MediaType.APPLICATION_JSON_VALUE})
+    public ResponseEntity<String> listRanks() {
+        List<FcRank> fcRanks = rankService.listRanks();
+        return toResponse(fcRanks);
+    }
+
+    @RequestMapping(value = "/ranks/enable", method = RequestMethod.POST, produces = {MediaType.APPLICATION_JSON_VALUE})
+    public ResponseEntity<String> enableRanks(@RequestBody String ranksString) throws IOException {
+        List<FcRank> ranks = jsonConverter.toList(ranksString, FcRank.class);
+        rankService.setRanksEnabled(ranks);
+        Map<String, String> responseMap = Collections.singletonMap("success", "true");
+        return toResponse(responseMap);
     }
 
     @RequestMapping(value = "/listMounts", method = RequestMethod.GET, produces = {MediaType.APPLICATION_JSON_VALUE})
-    public ResponseEntity<String> listMounts(@RequestParam(value = "refresh", required = false) String refresh) throws IOException {
+    public ResponseEntity<String> listMounts(@RequestParam(value = "refresh", required = false) String refresh) {
         if (refresh != null && refresh.equals("true")) {
             mountTracker.loadMounts();
         }
@@ -83,7 +106,7 @@ public class MountController {
     }
 
     @RequestMapping(value = "/addMount", method = RequestMethod.GET, produces = {MediaType.APPLICATION_JSON_VALUE})
-    public ResponseEntity<String> addMount(@RequestParam("name") String name, HttpServletRequest request) throws IOException {
+    public ResponseEntity<String> addMount(@RequestParam("name") String name, HttpServletRequest request) {
         if (name == null || name.isEmpty()) {
             return toErrorResponse("Missing required parameter: name");
         }
@@ -100,7 +123,7 @@ public class MountController {
 
     @Transactional
     @RequestMapping(value = "/removeMount", method = RequestMethod.GET, produces = {MediaType.APPLICATION_JSON_VALUE})
-    public ResponseEntity<String> removeMount(@RequestParam("id") long id, HttpServletRequest request) throws IOException {
+    public ResponseEntity<String> removeMount(@RequestParam("id") long id, HttpServletRequest request) {
         if (id == 0) {
             return toErrorResponse("Missing required parameter: id");
         }

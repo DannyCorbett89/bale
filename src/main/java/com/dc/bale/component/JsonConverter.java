@@ -3,12 +3,13 @@ package com.dc.bale.component;
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.type.CollectionType;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.util.List;
 
 @Component
 public class JsonConverter {
@@ -24,12 +25,8 @@ public class JsonConverter {
         return mapper.writeValueAsString(jsonObject);
     }
 
-    public <T> T toObject(String json) throws IOException {
-        return mapper.readValue(json, new TypeReference<T>() {
-        });
-    }
-
-    public <T> T toObject(String json, Class<T> type) throws IOException {
-        return mapper.readValue(json, type);
+    public <T> List<T> toList(String json, Class<T> type) throws IOException {
+        CollectionType collectionType = mapper.getTypeFactory().constructCollectionType(List.class, type);
+        return mapper.readValue(json, collectionType);
     }
 }

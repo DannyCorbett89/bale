@@ -22,6 +22,9 @@ public class Player {
     private boolean tracking;
     private String url;
 
+    @OneToOne
+    private FcRank rank;
+
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(name = "mount_link",
             joinColumns = @JoinColumn(name = "player_id", referencedColumnName = "id"),

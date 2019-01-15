@@ -34,6 +34,8 @@ public class MountTracker {
     @NonNull
     private PlayerRepository playerRepository;
     @NonNull
+    private FcRankRepository rankRepository;
+    @NonNull
     private MountLinkRepository mountLinkRepository;
     @NonNull
     private TrialRepository trialRepository;
@@ -136,7 +138,7 @@ public class MountTracker {
             if (x > 1) {
                 content = httpClient.get(BASE_URL + freeCompanyUrl.getValue() + "?page=" + x);
             }
-            Pattern pattern = Pattern.compile("<li class=\"entry\"><a href=\"(.+?)\".+?<p class=\"entry__name\">(.+?)</p>.+?</li>.+?</li>.+?</li>");
+            Pattern pattern = Pattern.compile("<li class=\"entry\"><a href=\"(.+?)\".+?<p class=\"entry__name\">(.+?)</p>.+?<ul class=\"entry__freecompany__info\"><li><img src=\"(.+?)\".+?<span>(.+?)</span></li>.+?</li>.+?</li>");
             Matcher matcher = pattern.matcher(content);
 
             // Load all the mounts for each player from the lodestone
@@ -144,13 +146,32 @@ public class MountTracker {
                 String playerUrl = matcher.group(1);
                 String playerName = matcher.group(2).replace("&#39;", "'");
                 Player player;
+                String rankIcon = matcher.group(3);
+                String rankName = matcher.group(4);
+                FcRank rank = rankRepository.findByIcon(rankIcon);
+
+                if (rank == null) {
+                    rank = rankRepository.save(FcRank.builder()
+                            .name(rankName)
+                            .icon(rankIcon)
+                            .build());
+                } else if (rank.getName() != null && !rank.getName().equals(rankName)) {
+                    rank.setName(rankName);
+                    rank = rankRepository.save(rank);
+                }
 
                 if (players.containsKey(playerName)) {
                     player = players.get(playerName);
+
+                    if (player.getRank() == null || player.getRank().getId() != rank.getId()) {
+                        player.setRank(rank);
+                        player = playerRepository.save(player);
+                    }
                 } else {
                     player = playerRepository.save(Player.builder()
                             .name(playerName)
                             .url(playerUrl)
+                            .rank(rank)
                             .build());
                 }
 
