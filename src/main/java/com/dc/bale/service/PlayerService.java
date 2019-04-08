@@ -16,14 +16,14 @@ public class PlayerService {
     @NonNull
     private PlayerRepository playerRepository;
     @NonNull
-    private MountTracker mountTracker;
+    private PlayerTracker playerTracker;
 
     public Player addPlayer(long playerId) {
         Player player = playerRepository.findOne(playerId);
         player.setTracking(true);
         player = playerRepository.save(player);
 
-        mountTracker.trackPlayer(player);
+        playerTracker.trackPlayer(player);
 
         return player;
     }
@@ -35,7 +35,7 @@ public class PlayerService {
             player.setTracking(false);
             playerRepository.save(player);
 
-            mountTracker.untrackPlayer(player);
+            playerTracker.untrackPlayer(player);
         } else {
             throw new PlayerException("Player not found: " + playerName);
         }

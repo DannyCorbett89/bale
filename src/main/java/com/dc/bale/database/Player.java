@@ -7,7 +7,9 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import javax.persistence.*;
+import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Entity
 @Data
@@ -36,6 +38,12 @@ public class Player {
             joinColumns = @JoinColumn(name = "player_id", referencedColumnName = "id"),
             inverseJoinColumns = @JoinColumn(name = "minion_id", referencedColumnName = "id"))
     private Set<Minion> minions;
+
+    public Set<Minion> getMissingMinions(List<Minion> totalMinions) {
+        return totalMinions.stream()
+                .map(minion -> !minions.contains(minion) ? minion : Minion.builder().id(minion.getId()).build())
+                .collect(Collectors.toSet());
+    }
 
     public boolean hasMount(String mountName) {
         return mounts.stream().anyMatch(mount -> mount.getName().equals(mountName));

@@ -24,7 +24,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 @RequiredArgsConstructor(onConstructor = @__(@Autowired))
-public class MountTracker {
+public class PlayerTracker {
     private static final String BASE_URL = "https://na.finalfantasyxiv.com";
 
     private final HttpClient httpClient;
@@ -37,7 +37,7 @@ public class MountTracker {
     private final ConfigRepository configRepository;
 
     private Map<String, List<Mount>> playerMounts = new HashMap<>();
-    private Map<String, List<Minion>> playerMinions = new HashMap<>();
+    private Map<String, Player> players = new HashMap<>();
     private String lastUpdated = "Never";
 
     public String getLastUpdated() {
@@ -85,14 +85,12 @@ public class MountTracker {
     }
 
     public List<PlayerRS> getMinions() {
-        // TODO: minion 205 is coming back as null
-        Map<String, Player> playersDB = playerRepository.findByNameIn(playerMinions.keySet()).stream().collect(Collectors.toMap(Player::getName, player -> player));
+        List<Minion> totalMinions = minionRepository.findAll();
 
-        return playerMinions.entrySet().stream().map(stringListEntry -> PlayerRS.builder()
-                .id(playersDB.get(stringListEntry.getKey()).getId())
-                .name(stringListEntry.getKey())
-                .minions(stringListEntry.getValue().stream()
-                        .filter(minion -> minion.getName() != null && minion.getLodestoneId() != null)
+        return players.values().stream().map(player -> PlayerRS.builder()
+                .id(player.getId())
+                .name(player.getName())
+                .minions(player.getMissingMinions(totalMinions).stream()
                         .map(minion -> MinionRS.builder()
                                 .id(minion.getId())
                                 .name(minion.getDisplayName())
@@ -139,25 +137,21 @@ public class MountTracker {
                 .collect(Collectors.toMap(Minion::getName, minion -> minion));
 
         // Get the list of all mounts that each player has, either from database or website
-        List<Player> players = loadPlayerData(totalMounts, totalMinions);
+        players.clear();
+        players = loadPlayerData(totalMounts, totalMinions);
 
         // TODO: Store in transient field on player object?
         // Convert it to a list of mounts that each player does not
         // have from the list of total mounts
         playerMounts.clear();
-        playerMounts.putAll(players.stream()
+        playerMounts.putAll(players.values().stream()
                 .collect(Collectors.toMap(Player::getName, player -> getMissingMounts(player, totalMounts))));
-
-
-        playerMinions.clear();
-        playerMinions.putAll(players.stream()
-                .collect(Collectors.toMap(Player::getName, player -> getMissingMinions(player, totalMinions))));
 
         SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm");
         lastUpdated = sdf.format(new Date());
     }
 
-    private List<Player> loadPlayerData(Map<String, Mount> totalMounts, Map<String, Minion> totalMinions) {
+    private Map<String, Player> loadPlayerData(Map<String, Mount> totalMounts, Map<String, Minion> totalMinions) {
         Config freeCompanyUrl = configRepository.findByName("freeCompanyUrl");
         String content = httpClient.get(BASE_URL + freeCompanyUrl.getValue());
 
@@ -244,7 +238,7 @@ public class MountTracker {
         return players.values().stream()
                 .filter(player -> playerRepository.exists(player.getId()))
                 .filter(Player::isTracking)
-                .collect(Collectors.toList());
+                .collect(Collectors.toMap(Player::getName, player -> player));
     }
 
     public List<AvailableMount> getAvailableMounts() {
@@ -303,27 +297,9 @@ public class MountTracker {
         return false;
     }
 
-    private boolean anyPlayerHasMinion(List<PlayerRS> players, MinionRS minion) {
-        for (PlayerRS player : players) {
-//            for (MinionRS minionRS : player.getMinions().values()) {
-//                if (minionRS.getId() == minion.getId() && minionRS.getName() != null) {
-//                    return true;
-//                }
-//            }
-        }
-
-        return false;
-    }
-
     private List<Mount> getMissingMounts(Player player, Map<String, Mount> totalMounts) {
         return totalMounts.values().stream()
                 .map(mount -> !player.getMounts().contains(mount) ? mount : Mount.builder().id(mount.getId()).build())
-                .collect(Collectors.toList());
-    }
-
-    private List<Minion> getMissingMinions(Player player, Map<String, Minion> totalMinions) {
-        return totalMinions.values().stream()
-                .map(minion -> !player.getMinions().contains(minion) ? minion : Minion.builder().id(minion.getId()).build())
                 .collect(Collectors.toList());
     }
 
@@ -340,8 +316,7 @@ public class MountTracker {
                 .collect(Collectors.toMap(Minion::getName, minion -> minion));
 
         loadMinions(player, totalMinions);
-
-        playerMinions.put(player.getName(), getMissingMinions(player, totalMinions));
+        players.put(player.getName(), player);
     }
 
     void untrackPlayer(Player player) {

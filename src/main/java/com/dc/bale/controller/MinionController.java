@@ -4,7 +4,7 @@ import com.dc.bale.component.JsonConverter;
 import com.dc.bale.model.Column;
 import com.dc.bale.model.PlayerRS;
 import com.dc.bale.model.Response;
-import com.dc.bale.service.MountTracker;
+import com.dc.bale.service.PlayerTracker;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,26 +27,29 @@ import java.util.stream.Collectors;
 public class MinionController {
     private static final int WIDTH_MODIFIER = 11;
     private final JsonConverter jsonConverter;
-    private final MountTracker mountTracker;
+    private final PlayerTracker playerTracker;
 
     @GetMapping(produces = {MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<String> listMinions(@RequestParam(value = "refresh", required = false) String refresh) {
         if (refresh != null && refresh.equals("true")) {
-            mountTracker.loadMounts();
+            playerTracker.loadMounts();
         }
 
-        List<PlayerRS> minions = mountTracker.getMinions();
+        List<PlayerRS> minions = playerTracker.getMinions();
 
         List<Column> columns = new ArrayList<>();
-        columns.add(Column.builder().key("name").name("Player Name").width(getLongestPlayerName(minions) * WIDTH_MODIFIER).frozen(true).build());
-        columns.addAll(minions.get(0).getMinions().entrySet().stream().map(entry -> Column.builder()
-                .key(entry.getKey())
-                .width(entry.getValue().length() * WIDTH_MODIFIER)
-                .frozen(false)
-                .build()).collect(Collectors.toSet()));
+
+        if (!minions.isEmpty()) {
+            columns.add(Column.builder().key("name").name("Player Name").width(getLongestPlayerName(minions) * WIDTH_MODIFIER).frozen(true).build());
+            columns.addAll(minions.get(0).getMinions().entrySet().stream().map(entry -> Column.builder()
+                    .key(entry.getKey())
+                    .width(entry.getValue().length() * WIDTH_MODIFIER)
+                    .frozen(false)
+                    .build()).collect(Collectors.toSet()));
+        }
 
         Response response = Response.builder()
-                .lastUpdated(mountTracker.getLastUpdated())
+                .lastUpdated(playerTracker.getLastUpdated())
                 .columns(columns)
                 .players(minions)
                 .build();

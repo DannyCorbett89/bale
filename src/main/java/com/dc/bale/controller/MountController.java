@@ -4,7 +4,7 @@ import com.dc.bale.component.JsonConverter;
 import com.dc.bale.database.Mount;
 import com.dc.bale.exception.MountException;
 import com.dc.bale.model.Response;
-import com.dc.bale.service.MountTracker;
+import com.dc.bale.service.PlayerTracker;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,17 +22,17 @@ import javax.transaction.Transactional;
 @RequiredArgsConstructor(onConstructor = @__(@Autowired))
 public class MountController {
     private final JsonConverter jsonConverter;
-    private final MountTracker mountTracker;
+    private final PlayerTracker playerTracker;
 
     @GetMapping(produces = {MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<String> listMounts(@RequestParam(value = "refresh", required = false) String refresh) {
         if (refresh != null && refresh.equals("true")) {
-            mountTracker.loadMounts();
+            playerTracker.loadMounts();
         }
 
         Response response = Response.builder()
-                .lastUpdated(mountTracker.getLastUpdated())
-                .players(mountTracker.getMounts())
+                .lastUpdated(playerTracker.getLastUpdated())
+                .players(playerTracker.getMounts())
                 .build();
 
         return toResponse(response);
@@ -40,7 +40,7 @@ public class MountController {
 
     @GetMapping(value = "/available", produces = {MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<String> listAvailableMounts() {
-        return toResponse(mountTracker.getAvailableMounts());
+        return toResponse(playerTracker.getAvailableMounts());
     }
 
     @PostMapping(value = "/add", produces = {MediaType.APPLICATION_JSON_VALUE})
@@ -52,7 +52,7 @@ public class MountController {
         log.info("[{}] Added mount: {}", request.getRemoteAddr(), name);
 
         try {
-            mountTracker.addMount(name);
+            playerTracker.addMount(name);
             return toResponse(StatusResponse.success());
         } catch (MountException e) {
             return toErrorResponse(e.getMessage());
@@ -68,7 +68,7 @@ public class MountController {
         }
 
         try {
-            Mount mount = mountTracker.removeMount(id);
+            Mount mount = playerTracker.removeMount(id);
             log.info("[{}] Removed mount: {}", request.getRemoteAddr(), mount.getName());
             return toResponse(StatusResponse.success());
         } catch (MountException e) {
