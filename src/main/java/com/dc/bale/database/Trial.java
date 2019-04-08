@@ -21,6 +21,8 @@ public class Trial {
     private String boss;
     @Column(name = "lodestone_id")
     private String lodestoneId;
+    @Column(name = "item_level")
+    private long itemLevel;
     private boolean loaded;
 
     @ManyToMany(fetch = FetchType.EAGER)
@@ -30,6 +32,6 @@ public class Trial {
     private List<Mount> mounts;
 
     public boolean hasAllValues() {
-        return name != null && boss != null && lodestoneId != null;
+        return name != null && boss != null && lodestoneId != null && itemLevel > 0;
     }
 }

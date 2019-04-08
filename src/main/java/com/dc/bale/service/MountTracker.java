@@ -4,9 +4,9 @@ import com.dc.bale.component.HttpClient;
 import com.dc.bale.database.*;
 import com.dc.bale.exception.MountException;
 import com.dc.bale.model.AvailableMount;
+import com.dc.bale.model.MinionRS;
 import com.dc.bale.model.MountRS;
 import com.dc.bale.model.PlayerRS;
-import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -27,22 +27,17 @@ import java.util.stream.Collectors;
 public class MountTracker {
     private static final String BASE_URL = "https://na.finalfantasyxiv.com";
 
-    @NonNull
-    private HttpClient httpClient;
-    @NonNull
-    private MountRepository mountRepository;
-    @NonNull
-    private PlayerRepository playerRepository;
-    @NonNull
-    private FcRankRepository rankRepository;
-    @NonNull
-    private MountLinkRepository mountLinkRepository;
-    @NonNull
-    private TrialRepository trialRepository;
-    @NonNull
-    private ConfigRepository configRepository;
+    private final HttpClient httpClient;
+    private final MountRepository mountRepository;
+    private final PlayerRepository playerRepository;
+    private final FcRankRepository rankRepository;
+    private final MountLinkRepository mountLinkRepository;
+    private final TrialRepository trialRepository;
+    private final MinionRepository minionRepository;
+    private final ConfigRepository configRepository;
 
     private Map<String, List<Mount>> playerMounts = new HashMap<>();
+    private Map<String, List<Minion>> playerMinions = new HashMap<>();
     private String lastUpdated = "Never";
 
     public String getLastUpdated() {
@@ -68,10 +63,43 @@ public class MountTracker {
             }
         }
 
+        Map<Long, Long> ilevels = mountLinkRepository.findAll().stream()
+                .filter(mountLink -> mountLink.getTrialId() > 0)
+                .collect(Collectors.toMap(
+                        MountLink::getMountId,
+                        mountLink -> {
+                            Trial trial = trialRepository.findOne(mountLink.getTrialId());
+                            if (trial != null) {
+                                return trial.getItemLevel();
+                            } else {
+                                return 0L;
+                            }
+                        },
+                        (first, second) -> first)
+                );
+
         players.sort((o1, o2) -> Long.compare(o2.numMounts(), o1.numMounts()));
-        players.forEach(player -> player.getMounts().sort(Comparator.comparingLong(MountRS::getId)));
+        players.forEach(player -> player.getMounts().sort(Comparator.comparingLong(mount -> ilevels.get(mount.getId()))));
 
         return players;
+    }
+
+    public List<PlayerRS> getMinions() {
+        // TODO: minion 205 is coming back as null
+        Map<String, Player> playersDB = playerRepository.findByNameIn(playerMinions.keySet()).stream().collect(Collectors.toMap(Player::getName, player -> player));
+
+        return playerMinions.entrySet().stream().map(stringListEntry -> PlayerRS.builder()
+                .id(playersDB.get(stringListEntry.getKey()).getId())
+                .name(stringListEntry.getKey())
+                .minions(stringListEntry.getValue().stream()
+                        .filter(minion -> minion.getName() != null && minion.getLodestoneId() != null)
+                        .map(minion -> MinionRS.builder()
+                                .id(minion.getId())
+                                .name(minion.getDisplayName())
+                                .url(minion.getUrl())
+                                .build())
+                        .collect(Collectors.toMap(minion -> "minion-" + minion.getId(), MinionRS::getName)))
+                .build()).sorted((o1, o2) -> Long.compare(o2.numMinions(), o1.numMinions())).collect(Collectors.toList());
     }
 
     public void addMount(String name) throws MountException {
@@ -105,31 +133,37 @@ public class MountTracker {
     @PostConstruct
     @Scheduled(cron = "0 0 * * * *")
     public void loadMounts() {
-        log.info("Loading Mounts");
-
         Map<String, Mount> totalMounts = mountRepository.findAllByTracking(true).stream()
                 .collect(Collectors.toMap(Mount::getName, mount -> mount));
+        Map<String, Minion> totalMinions = minionRepository.findAll().stream()
+                .collect(Collectors.toMap(Minion::getName, minion -> minion));
 
         // Get the list of all mounts that each player has, either from database or website
-        List<Player> players = loadPlayerData(totalMounts);
+        List<Player> players = loadPlayerData(totalMounts, totalMinions);
 
+        // TODO: Store in transient field on player object?
         // Convert it to a list of mounts that each player does not
         // have from the list of total mounts
         playerMounts.clear();
         playerMounts.putAll(players.stream()
                 .collect(Collectors.toMap(Player::getName, player -> getMissingMounts(player, totalMounts))));
 
+
+        playerMinions.clear();
+        playerMinions.putAll(players.stream()
+                .collect(Collectors.toMap(Player::getName, player -> getMissingMinions(player, totalMinions))));
+
         SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm");
         lastUpdated = sdf.format(new Date());
     }
 
-    private List<Player> loadPlayerData(Map<String, Mount> totalMounts) {
+    private List<Player> loadPlayerData(Map<String, Mount> totalMounts, Map<String, Minion> totalMinions) {
         Config freeCompanyUrl = configRepository.findByName("freeCompanyUrl");
         String content = httpClient.get(BASE_URL + freeCompanyUrl.getValue());
 
         Map<String, Player> players = playerRepository.findAll().stream()
                 .collect(Collectors.toMap(Player::getName, player -> player));
-        Map<Player, MountLoader> loaders = new HashMap<>();
+        Map<Player, Loader> loaders = new HashMap<>();
         int numPages = getNumPages(content);
         Set<Player> existingPlayers = new HashSet<>();
 
@@ -179,6 +213,11 @@ public class MountTracker {
                     MountLoader mountLoader = new MountLoader(player, totalMounts);
                     mountLoader.start();
                     loaders.put(player, mountLoader);
+
+
+                    MinionLoader minionLoader = new MinionLoader(player, totalMinions);
+                    minionLoader.start();
+                    loaders.put(player, minionLoader);
                 }
                 existingPlayers.add(player);
             }
@@ -197,6 +236,9 @@ public class MountTracker {
                 .filter(player -> !existingPlayers.contains(player))
                 .collect(Collectors.toSet());
 
+
+        // TODO: Potential bug here. Every now and then, players are unintentionally untracked
+        log.debug("Deleting players: " + oldPlayers.toString());
         playerRepository.delete(oldPlayers);
 
         return players.values().stream()
@@ -242,7 +284,7 @@ public class MountTracker {
                 .map(mountLink -> trialRepository.findOne(mountLink.getTrialId()).getBoss())
                 .collect(Collectors.toList());
 
-        if (trialBossNames.size() == 0 || trialBossNames.size() > 1) {
+        if (trialBossNames.size() != 1) {
             return mount.getName();
         } else {
             return StringUtils.join(trialBossNames, "/");
@@ -261,9 +303,27 @@ public class MountTracker {
         return false;
     }
 
+    private boolean anyPlayerHasMinion(List<PlayerRS> players, MinionRS minion) {
+        for (PlayerRS player : players) {
+//            for (MinionRS minionRS : player.getMinions().values()) {
+//                if (minionRS.getId() == minion.getId() && minionRS.getName() != null) {
+//                    return true;
+//                }
+//            }
+        }
+
+        return false;
+    }
+
     private List<Mount> getMissingMounts(Player player, Map<String, Mount> totalMounts) {
         return totalMounts.values().stream()
                 .map(mount -> !player.getMounts().contains(mount) ? mount : Mount.builder().id(mount.getId()).build())
+                .collect(Collectors.toList());
+    }
+
+    private List<Minion> getMissingMinions(Player player, Map<String, Minion> totalMinions) {
+        return totalMinions.values().stream()
+                .map(minion -> !player.getMinions().contains(minion) ? minion : Minion.builder().id(minion.getId()).build())
                 .collect(Collectors.toList());
     }
 
@@ -274,6 +334,14 @@ public class MountTracker {
         loadMounts(player, totalMounts);
 
         playerMounts.put(player.getName(), getMissingMounts(player, totalMounts));
+
+
+        Map<String, Minion> totalMinions = minionRepository.findAll().stream()
+                .collect(Collectors.toMap(Minion::getName, minion -> minion));
+
+        loadMinions(player, totalMinions);
+
+        playerMinions.put(player.getName(), getMissingMinions(player, totalMinions));
     }
 
     void untrackPlayer(Player player) {
@@ -284,40 +352,92 @@ public class MountTracker {
         new MountLoader(player, totalMounts).run();
     }
 
-    public class MountLoader extends Thread {
-        private Player player;
-        private Map<String, Mount> totalMounts;
+    private void loadMinions(Player player, Map<String, Minion> totalMinions) {
+        new MinionLoader(player, totalMinions).run();
+    }
 
-        MountLoader(Player player, Map<String, Mount> totalMounts) {
+    // TODO: Loaders package
+    public abstract class Loader extends Thread {
+        Player player;
+
+        Loader(Player player) {
             this.player = player;
-            this.totalMounts = totalMounts;
         }
+
+        protected abstract boolean alreadyOwnsAll();
+
+        protected abstract String getContentSection(String content);
+
+        protected abstract boolean handleMatch(String name);
 
         @Override
         public void run() {
-            // If all the mounts that we are checking for in totalMounts exist in the player's
-            // list of mounts, there will be no point in loading the URL
-            if (totalMounts.values().stream().allMatch(mount -> player.hasMount(mount.getName()))) {
+            if (alreadyOwnsAll()) {
                 return;
             }
 
             String url = BASE_URL + player.getUrl();
             String content = httpClient.get(url);
+            String contentSection = getContentSection(content);
             Pattern pattern = Pattern.compile("<li><div class=\"character__item_icon.+?data-tooltip=\"(.+?)\".+?</li>");
-            Matcher matcher = pattern.matcher(content);
+            Matcher matcher = pattern.matcher(contentSection);
             boolean modified = false;
 
             while (matcher.find()) {
-                String mount = matcher.group(1);
-
-                if (!player.hasMount(mount) && player.addMount(totalMounts.get(mount))) {
-                    modified = true;
-                }
+                modified = handleMatch(matcher.group(1));
             }
 
             if (modified) {
                 playerRepository.save(player);
             }
+        }
+    }
+
+    public class MountLoader extends Loader {
+        private Map<String, Mount> totalMounts;
+
+        MountLoader(Player player, Map<String, Mount> totalMounts) {
+            super(player);
+            this.totalMounts = totalMounts;
+        }
+
+        @Override
+        protected boolean alreadyOwnsAll() {
+            return totalMounts.values().stream().allMatch(mount -> player.hasMount(mount.getName()));
+        }
+
+        @Override
+        protected String getContentSection(String content) {
+            return content.substring(0, content.indexOf("Minions</h3>"));
+        }
+
+        @Override
+        protected boolean handleMatch(String name) {
+            return !player.hasMount(name) && player.addMount(totalMounts.get(name));
+        }
+    }
+
+    public class MinionLoader extends Loader {
+        private Map<String, Minion> totalMinions;
+
+        MinionLoader(Player player, Map<String, Minion> totalMinions) {
+            super(player);
+            this.totalMinions = totalMinions;
+        }
+
+        @Override
+        protected boolean alreadyOwnsAll() {
+            return totalMinions.values().stream().allMatch(minion -> player.hasMinion(minion.getName()));
+        }
+
+        @Override
+        protected String getContentSection(String content) {
+            return content.substring(content.indexOf("Minions</h3>"));
+        }
+
+        @Override
+        protected boolean handleMatch(String name) {
+            return !player.hasMinion(name) && player.addMinion(totalMinions.get(name));
         }
     }
 }

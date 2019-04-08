@@ -1,4 +1,4 @@
-package com.dc.bale.controller;
+package com.dc.bale.hidden.controller2;
 
 import com.dc.bale.component.HttpClient;
 import com.dc.bale.database.Config;

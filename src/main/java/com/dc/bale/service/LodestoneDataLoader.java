@@ -2,7 +2,7 @@ package com.dc.bale.service;
 
 import com.dc.bale.component.HttpClient;
 import com.dc.bale.database.*;
-import lombok.NonNull;
+import com.dc.bale.exception.UnableToParseNumPagesException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -26,19 +26,18 @@ public class LodestoneDataLoader {
     private static final String BASE_URL = "https://na.finalfantasyxiv.com/lodestone";
     private static final String DB_URL = BASE_URL + "/playguide/db";
     private static final String DUTY_URL = DB_URL + "/duty";
+    private static final String TRIALS_URL = DUTY_URL + "/?category2=4";
+    public static final String ITEM_URL = DB_URL + "/item";
+    private static final String MINIONS_URL = ITEM_URL + "/?category2=7&category3=81";
     private static final int REFRESH_INTERVAL = 3600000;
     private static final Object MOUNT_LOADER_LOCK = new Object();
 
-    @NonNull
-    private HttpClient httpClient;
-    @NonNull
-    private MountRepository mountRepository;
-    @NonNull
-    private TrialRepository trialRepository;
-    @NonNull
-    private MountIdentifierRepository mountIdentifierRepository;
-    @NonNull
-    private XivdbService xivdbService;
+    private final HttpClient httpClient;
+    private final MountRepository mountRepository;
+    private final TrialRepository trialRepository;
+    private final MountIdentifierRepository mountIdentifierRepository;
+    private final MinionRepository minionRepository;
+    private final XivdbService xivdbService;
 
     private String mountIdentifiersRegex;
 
@@ -61,14 +60,18 @@ public class LodestoneDataLoader {
         loadTrials(true);
     }
 
+    @PostConstruct
+    private void loadAllMinions() {
+        loadMinions(false);
+    }
+
+    @Scheduled(cron = "0 20 * * * *")
+    private void loadLatestMinions() {
+        loadMinions(true);
+    }
+
     private void loadTrials(boolean latestPatch) throws IOException {
-        log.info("Loading " + (latestPatch ? "latest" : "all") + " trials");
-        String trialsUrl = DUTY_URL + "/?category2=4";
-
-        if (latestPatch) {
-            trialsUrl += "&patch=latest";
-        }
-
+        String trialsUrl = getFullUrl(TRIALS_URL, latestPatch);
         String content = httpClient.get(trialsUrl);
         Set<String> trialNames = trialRepository.findAll().stream()
                 .map(Trial::getName)
@@ -166,6 +169,15 @@ public class LodestoneDataLoader {
                     trial.setMounts(mounts);
                 }
 
+                Pattern ilvlPattern = Pattern.compile("<li>Avg\\. Item Level: (.+?)</li>");
+                Matcher ilvlMatcher = ilvlPattern.matcher(content);
+
+                if (ilvlMatcher.find()) {
+                    String ilvlString = ilvlMatcher.group(1);
+                    int ilvl = Integer.parseInt(ilvlString);
+                    trial.setItemLevel(ilvl);
+                }
+
                 if (trial.hasAllValues()) {
                     trial.setLoaded(true);
                 }
@@ -183,15 +195,67 @@ public class LodestoneDataLoader {
 
     // TODO: Interface/Abstract class for data loader service?
     private int getNumPagesDB(String content, String url) {
-        String searchTerm = url + "&page=";
+        String urlPrefix = url.contains("&") ? url.substring(0, url.indexOf("&")) : url;
+        String searchTerm = urlPrefix + "&page=";
         String formattedSearchTerm = searchTerm.replace("&", "&amp;");
         int total = StringUtils.countMatches(content, formattedSearchTerm);
 
-        if (total == 0) {
+        if (total <= 2) {
             return 1;
         }
 
-        int singlePager = total / 2;
-        return singlePager - 2;
+        Pattern pattern = Pattern.compile("<li class=\"next_all\"><a href=\"" + formattedSearchTerm.replace("?", "\\?") + "([0-9]+).+?</li>");
+        Matcher matcher = pattern.matcher(content);
+
+        if (matcher.find()) {
+            String numPages = matcher.group(1);
+            return Integer.parseInt(numPages);
+        }
+
+        throw new UnableToParseNumPagesException();
+    }
+
+    private String getFullUrl(String url, boolean latestPatch) {
+        if (latestPatch) {
+            url += "&patch=latest";
+        }
+
+        return url;
+    }
+
+    private void loadMinions(boolean latestPatch) {
+        // TODO: Refactor, extract
+        String minionsUrl = getFullUrl(MINIONS_URL, latestPatch);
+        String content = httpClient.get(minionsUrl);
+        Set<String> minionNames = minionRepository.findAll().stream()
+                .map(Minion::getName)
+                .collect(Collectors.toSet());
+        int numPages = getNumPagesDB(content, minionsUrl);
+
+        for (int x = 1; x <= numPages; x++) {
+            // First page is already loaded, don't load it again
+            if (x > 1) {
+                content = httpClient.get(minionsUrl + "&page=" + x)
+                        .replace("\n", "")
+                        .replace("\r", "");
+            }
+
+            Pattern pattern = Pattern.compile("</span>.+?<a href=\"/lodestone/playguide/db/item/([a-z0-9]+)/(?:\\?patch=latest)?\" class=\"db_popup db-table__txt--detail_link\">(.+?)</a>");
+            Matcher matcher = pattern.matcher(content);
+
+            while (matcher.find()) {
+                String lodestoneId = matcher.group(1);
+                String name = matcher.group(2)
+                        .replace("<i>", "")
+                        .replace("</i>", "");
+                if (!minionNames.contains(name)) {
+                    Minion minion = minionRepository.save(Minion.builder()
+                            .name(name)
+                            .lodestoneId(lodestoneId)
+                            .build());
+                    log.info("Loaded " + minion.getName());
+                }
+            }
+        }
     }
 }

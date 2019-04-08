@@ -6,6 +6,4 @@ import java.util.List;
 
 public interface MountLinkRepository extends JpaRepository<MountLink, Long> {
     List<MountLink> findAllByMountIdAndTrialIdGreaterThan(long mountId, long trialId);
-
-    void deleteByMountId(Long mountId);
 }
