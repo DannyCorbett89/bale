@@ -1,7 +1,12 @@
 package com.dc.bale.controller;
 
 import com.dc.bale.component.JsonConverter;
+import com.dc.bale.database.Minion;
+import com.dc.bale.database.MinionRepository;
+import com.dc.bale.database.Player;
+import com.dc.bale.database.PlayerRepository;
 import com.dc.bale.model.Column;
+import com.dc.bale.model.MinionRS;
 import com.dc.bale.model.PlayerRS;
 import com.dc.bale.model.Response;
 import com.dc.bale.service.PlayerTracker;
@@ -28,6 +33,8 @@ public class MinionController {
     private static final int WIDTH_MODIFIER = 11;
     private final JsonConverter jsonConverter;
     private final PlayerTracker playerTracker;
+    private final MinionRepository minionRepository;
+    private final PlayerRepository playerRepository;
 
     @GetMapping(produces = {MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<String> listMinions(@RequestParam(value = "refresh", required = false) String refresh) {
@@ -35,7 +42,7 @@ public class MinionController {
             playerTracker.loadMounts();
         }
 
-        List<PlayerRS> minions = playerTracker.getMinions();
+        List<PlayerRS> minions = getMinions();
 
         List<Column> columns = new ArrayList<>();
 
@@ -55,6 +62,23 @@ public class MinionController {
                 .build();
 
         return toResponse(response);
+    }
+
+    private List<PlayerRS> getMinions() {
+        List<Minion> totalMinions = minionRepository.findAll();
+        List<Player> players = playerRepository.findByVisibleTrue();
+
+        return players.stream().map(player -> PlayerRS.builder()
+                .id(player.getId())
+                .name(player.getName())
+                .minions(player.getMissingMinions(totalMinions).stream()
+                        .map(minion -> MinionRS.builder()
+                                .id(minion.getId())
+                                .name(minion.getDisplayName())
+                                .url(minion.getUrl())
+                                .build())
+                        .collect(Collectors.toMap(minion -> "minion-" + minion.getId(), MinionRS::getName)))
+                .build()).sorted((o1, o2) -> Long.compare(o2.numMinions(), o1.numMinions())).collect(Collectors.toList());
     }
 
     private int getLongestPlayerName(List<PlayerRS> players) {

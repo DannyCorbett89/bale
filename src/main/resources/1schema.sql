@@ -43,11 +43,11 @@ create table fc_rank
 drop table if exists player;
 create table player
 (
-    id       int          not null auto_increment,
-    name     varchar(191) not null,
-    tracking bool         not null,
-    url      varchar(191) not null,
-    rank_id  int,
+    id      int          not null auto_increment,
+    name    varchar(191) not null,
+    visible bool         not null,
+    url     varchar(191) not null,
+    rank_id int,
     primary key (id),
     foreign key (rank_id) references fc_rank (id),
     unique (name)
