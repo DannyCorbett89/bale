@@ -12,12 +12,6 @@ public class Response {
     private List<PlayerRS> players;
     private List<Column> columns;
 
-    //
-//const rows = [
-//    { playerName: 0, minion-1: "Task 1", minion-2: 20 },
-//    { id: 1, title: "Task 2", complete: 40 },
-//    { id: 2, title: "Task 3", complete: 60 }
-//];
     public int getNumColumns() {
         if (players.stream().allMatch(player -> player.getMounts() != null)) {
             return players.stream()

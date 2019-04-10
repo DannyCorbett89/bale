@@ -39,25 +39,37 @@ public class Player {
             inverseJoinColumns = @JoinColumn(name = "minion_id", referencedColumnName = "id"))
     private Set<Minion> minions;
 
+    public Set<Mount> getMissingMounts(List<Mount> totalMounts) {
+        return totalMounts.stream()
+                .filter(Mount::isVisible)
+                .map(mount -> !mounts.contains(mount) ? mount : Mount.builder().id(mount.getId()).build())
+                .collect(Collectors.toSet());
+    }
+
     public Set<Minion> getMissingMinions(List<Minion> totalMinions) {
         return totalMinions.stream()
                 .map(minion -> !minions.contains(minion) ? minion : Minion.builder().id(minion.getId()).build())
                 .collect(Collectors.toSet());
     }
 
-    public boolean hasMount(String mountName) {
-        return mounts.stream().anyMatch(mount -> mount.getName().equals(mountName));
-    }
-
-    public boolean hasMinion(String minionName) {
-        return minions.stream().anyMatch(minion -> minion.getName().equals(minionName));
+    public void clear() {
+        mounts.clear();
+        minions.clear();
     }
 
     public boolean addMount(Mount mount) {
-        return mount != null && mounts.add(mount);
+        return mount != null && !hasMount(mount.getName()) && mounts.add(mount);
     }
 
     public boolean addMinion(Minion minion) {
-        return minion != null && minions.add(minion);
+        return minion != null && !hasMinion(minion.getName()) && minions.add(minion);
+    }
+
+    private boolean hasMount(String mountName) {
+        return mounts.stream().anyMatch(mount -> mount.getName().equals(mountName));
+    }
+
+    private boolean hasMinion(String minionName) {
+        return minions.stream().anyMatch(minion -> minion.getName().equals(minionName));
     }
 }

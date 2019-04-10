@@ -23,9 +23,9 @@ create table trial
 drop table if exists mount;
 create table mount
 (
-    id       int  not null auto_increment,
-    name     varchar(191),
-    tracking bool not null,
+    id      int  not null auto_increment,
+    name    varchar(191),
+    visible bool not null,
     primary key (id),
     unique (name)
 );

@@ -10,6 +10,7 @@ import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
+import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.apache.http.util.EntityUtils;
 import org.springframework.stereotype.Component;
 
@@ -41,12 +42,18 @@ public class HttpClient {
             e.printStackTrace();
             factory = null;
         }
+
+        PoolingHttpClientConnectionManager manager = new PoolingHttpClientConnectionManager();
+        manager.setMaxTotal(200);
+        manager.setDefaultMaxPerRoute(20);
+
         client = HttpClients.custom()
                 .setDefaultRequestConfig(RequestConfig.custom()
                         .setConnectTimeout(5000)
                         .setSocketTimeout(10000)
                         .build())
                 .setSSLSocketFactory(factory)
+                .setConnectionManager(manager)
                 .build();
     }
 
@@ -64,12 +71,12 @@ public class HttpClient {
         return execute(request);
     }
 
-    public String put(String url, ContentType contentType, String authorization, String content) {
+    public void put(String url, ContentType contentType, String authorization, String content) {
         HttpPut put = new HttpPut(url);
         put.addHeader("Content-type", contentType.getMimeType());
         put.addHeader("Authorization", authorization);
         put.setEntity(new StringEntity(content, Charset.defaultCharset()));
-        return execute(put);
+        execute(put);
     }
 
     private String execute(HttpRequestBase request) {

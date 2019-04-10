@@ -7,5 +7,5 @@ import java.util.List;
 public interface MountRepository extends JpaRepository<Mount, Long> {
     Mount findByName(String name);
 
-    List<Mount> findAllByTracking(boolean tracking);
+    List<Mount> findAllByVisible(boolean visible);
 }

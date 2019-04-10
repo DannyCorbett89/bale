@@ -20,6 +20,6 @@ public class Mount {
     @GeneratedValue(strategy = GenerationType.AUTO)
     private long id;
     private String name;
-    private boolean tracking;
+    private boolean visible;
 }
                       

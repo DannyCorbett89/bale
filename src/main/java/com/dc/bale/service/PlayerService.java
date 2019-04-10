@@ -20,8 +20,6 @@ public class PlayerService {
         player.setVisible(true);
         player = playerRepository.save(player);
 
-        playerTracker.trackPlayer(player);
-
         return player;
     }
 
@@ -31,7 +29,6 @@ public class PlayerService {
         if (player != null) {
             player.setVisible(false);
             playerRepository.save(player);
-            playerTracker.untrackPlayer(player);
         } else {
             throw new PlayerException("Player not found: " + playerName);
         }

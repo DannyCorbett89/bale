@@ -11,7 +11,6 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -37,7 +36,6 @@ public class LodestoneDataLoader {
     private final TrialRepository trialRepository;
     private final MountIdentifierRepository mountIdentifierRepository;
     private final MinionRepository minionRepository;
-    private final XivdbService xivdbService;
 
     private String mountIdentifiersRegex;
 
@@ -51,12 +49,12 @@ public class LodestoneDataLoader {
     }
 
     @PostConstruct
-    private void loadAllTrials() throws IOException {
+    private void loadAllTrials() {
         loadTrials(false);
     }
 
     @Scheduled(cron = "0 10 * * * *")
-    private void loadLatestTrials() throws IOException {
+    private void loadLatestTrials() {
         loadTrials(true);
     }
 
@@ -70,17 +68,15 @@ public class LodestoneDataLoader {
         loadMinions(true);
     }
 
-    private void loadTrials(boolean latestPatch) throws IOException {
+    private void loadTrials(boolean latestPatch) {
         String trialsUrl = getFullUrl(TRIALS_URL, latestPatch);
         String content = httpClient.get(trialsUrl);
         Set<String> trialNames = trialRepository.findAll().stream()
                 .map(Trial::getName)
                 .collect(Collectors.toSet());
         int numPages = getNumPagesDB(content, trialsUrl);
-        List<TrialLoader> loaders = new ArrayList<>();
 
         for (int x = 1; x <= numPages; x++) {
-            // First page is already loaded, don't load it again
             if (x > 1) {
                 content = httpClient.get(trialsUrl + "&page=" + x);
             }
@@ -93,30 +89,16 @@ public class LodestoneDataLoader {
                 String trialName = matcher.group(2)
                         .replace("<i>", "")
                         .replace("</i>", "");
-                // TODO: Translation table to match mount name with whistle name
-                // TODO: Store regex in configs table, in case it changes on lodestone
                 if (!trialNames.contains(trialName)) {
                     Trial trial = trialRepository.save(Trial.builder()
                             .name(trialName)
                             .lodestoneId(trialUrl)
                             .build());
 
-                    TrialLoader loader = new TrialLoader(trial);
-                    loaders.add(loader);
-                    loader.start();
+                    new TrialLoader(trial).start();
                 }
             }
         }
-
-        for (TrialLoader loader : loaders) {
-            try {
-                loader.join();
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
-
-        xivdbService.loadXivDBIds();
     }
 
     public class TrialLoader extends Thread {
@@ -140,7 +122,7 @@ public class LodestoneDataLoader {
                 if (matcher.find()) {
                     boss = matcher.group(1);
                 } else {
-                    boss = xivdbService.getTrialBossName(trial);
+                    boss = "TODO: Fix name";
                 }
                 trial.setBoss(boss);
 
@@ -157,7 +139,7 @@ public class LodestoneDataLoader {
                         if (mount == null) {
                             mount = mountRepository.save(Mount.builder()
                                     .name(mountName)
-                                    .tracking(true)
+                                    .visible(true)
                                     .build());
                         }
 
@@ -193,7 +175,6 @@ public class LodestoneDataLoader {
         }
     }
 
-    // TODO: Interface/Abstract class for data loader service?
     private int getNumPagesDB(String content, String url) {
         String urlPrefix = url.contains("&") ? url.substring(0, url.indexOf("&")) : url;
         String searchTerm = urlPrefix + "&page=";
@@ -233,7 +214,6 @@ public class LodestoneDataLoader {
         int numPages = getNumPagesDB(content, minionsUrl);
 
         for (int x = 1; x <= numPages; x++) {
-            // First page is already loaded, don't load it again
             if (x > 1) {
                 content = httpClient.get(minionsUrl + "&page=" + x)
                         .replace("\n", "")
