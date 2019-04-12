@@ -1,4 +1,4 @@
-package com.dc.bale.database;
+package com.dc.bale.database.entity;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -15,9 +15,11 @@ import javax.persistence.Id;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class MountIdentifier {
+public class FcRank {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private long id;
     private String name;
+    private String icon;
+    private boolean enabled;
 }

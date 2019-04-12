@@ -1,4 +1,4 @@
-package com.dc.bale.database;
+package com.dc.bale.database.entity;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

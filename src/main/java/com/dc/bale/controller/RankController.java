@@ -1,7 +1,7 @@
 package com.dc.bale.controller;
 
 import com.dc.bale.component.JsonConverter;
-import com.dc.bale.database.FcRank;
+import com.dc.bale.database.entity.FcRank;
 import com.dc.bale.service.RankService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.RequiredArgsConstructor;

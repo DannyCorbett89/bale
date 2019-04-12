@@ -1,4 +1,4 @@
-package com.dc.bale.database;
+package com.dc.bale.database.entity;
 
 import com.dc.bale.service.LodestoneDataLoader;
 import lombok.AllArgsConstructor;
@@ -26,6 +26,7 @@ public class Minion {
     }
 
     public String getDisplayName() {
+        // TODO: Render URL on table
 //        return name != null ? "<a href=\"" + getUrl() + "\" target=\"_blank\">" + name + "</a>" : "";
         return name != null ? name : "";
     }

@@ -1,8 +1,8 @@
 package com.dc.bale.controller;
 
 import com.dc.bale.component.JsonConverter;
-import com.dc.bale.database.FcRank;
-import com.dc.bale.database.Player;
+import com.dc.bale.database.entity.FcRank;
+import com.dc.bale.database.entity.Player;
 import com.dc.bale.exception.PlayerException;
 import com.dc.bale.service.PlayerService;
 import com.dc.bale.service.RankService;

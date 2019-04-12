@@ -1,8 +1,8 @@
 package com.dc.bale.hidden.controller2;
 
 import com.dc.bale.component.HttpClient;
-import com.dc.bale.database.Config;
-import com.dc.bale.database.ConfigRepository;
+import com.dc.bale.database.dao.ConfigRepository;
+import com.dc.bale.database.entity.Config;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;

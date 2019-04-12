@@ -1,7 +1,7 @@
 package com.dc.bale.controller;
 
 import com.dc.bale.component.JsonConverter;
-import com.dc.bale.database.Mount;
+import com.dc.bale.database.entity.Mount;
 import com.dc.bale.exception.MountException;
 import com.dc.bale.model.Response;
 import com.dc.bale.service.PlayerTracker;

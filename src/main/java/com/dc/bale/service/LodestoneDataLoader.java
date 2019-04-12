@@ -1,7 +1,14 @@
 package com.dc.bale.service;
 
 import com.dc.bale.component.HttpClient;
-import com.dc.bale.database.*;
+import com.dc.bale.database.dao.MinionRepository;
+import com.dc.bale.database.dao.MountIdentifierRepository;
+import com.dc.bale.database.dao.MountRepository;
+import com.dc.bale.database.dao.TrialRepository;
+import com.dc.bale.database.entity.Minion;
+import com.dc.bale.database.entity.Mount;
+import com.dc.bale.database.entity.MountIdentifier;
+import com.dc.bale.database.entity.Trial;
 import com.dc.bale.exception.UnableToParseNumPagesException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

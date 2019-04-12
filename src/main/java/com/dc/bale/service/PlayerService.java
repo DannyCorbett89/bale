@@ -1,7 +1,7 @@
 package com.dc.bale.service;
 
-import com.dc.bale.database.Player;
-import com.dc.bale.database.PlayerRepository;
+import com.dc.bale.database.dao.PlayerRepository;
+import com.dc.bale.database.entity.Player;
 import com.dc.bale.exception.PlayerException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;

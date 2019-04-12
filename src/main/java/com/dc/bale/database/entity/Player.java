@@ -1,4 +1,4 @@
-package com.dc.bale.database;
+package com.dc.bale.database.entity;
 
 
 import lombok.AllArgsConstructor;
@@ -46,30 +46,28 @@ public class Player {
                 .collect(Collectors.toSet());
     }
 
-    public Set<Minion> getMissingMinions(List<Minion> totalMinions) {
-        return totalMinions.stream()
-                .map(minion -> !minions.contains(minion) ? minion : Minion.builder().id(minion.getId()).build())
-                .collect(Collectors.toSet());
-    }
-
     public void clear() {
         mounts.clear();
         minions.clear();
     }
 
-    public boolean addMount(Mount mount) {
-        return mount != null && !hasMount(mount.getName()) && mounts.add(mount);
+    public void addMount(Mount mount) {
+        if (mount != null && !hasMount(mount.getName())) {
+            mounts.add(mount);
+        }
     }
 
-    public boolean addMinion(Minion minion) {
-        return minion != null && !hasMinion(minion.getName()) && minions.add(minion);
+    public void addMinion(Minion minion) {
+        if (minion != null && !hasMinion(minion.getName())) {
+            minions.add(minion);
+        }
     }
 
     private boolean hasMount(String mountName) {
         return mounts.stream().anyMatch(mount -> mount.getName().equals(mountName));
     }
 
-    private boolean hasMinion(String minionName) {
+    public boolean hasMinion(String minionName) {
         return minions.stream().anyMatch(minion -> minion.getName().equals(minionName));
     }
 }

@@ -1,7 +1,7 @@
 package com.dc.bale.service;
 
-import com.dc.bale.database.FcRank;
-import com.dc.bale.database.FcRankRepository;
+import com.dc.bale.database.dao.FcRankRepository;
+import com.dc.bale.database.entity.FcRank;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;

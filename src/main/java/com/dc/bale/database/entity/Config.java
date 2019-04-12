@@ -1,7 +1,6 @@
-package com.dc.bale.database;
+package com.dc.bale.database.entity;
 
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -12,14 +11,12 @@ import javax.persistence.Id;
 
 @Entity
 @Data
-@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class Mount {
+public class Config {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private long id;
     private String name;
-    private boolean visible;
+    private String value;
 }
-                      
