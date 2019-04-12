@@ -55,7 +55,7 @@ public class MinionController {
                 .key("name")
                 .name("Minion Name")
                 .frozen(true)
-                .width(170)
+                .width(200)
                 .build());
         columns.addAll(visiblePlayers.stream()
                 .map(this::getColumn)
@@ -77,7 +77,7 @@ public class MinionController {
 
     private MinionRS getPlayersNeedingMinion(List<Player> players, Minion minion) {
         return MinionRS.builder()
-                .id(minion.getId())
+                .id(minion.getLodestoneId())
                 .name(minion.getDisplayName())
                 .players(players.stream()
                         .filter(player1 -> playerDoesNotHaveMinion(minion, player1))

@@ -26,8 +26,6 @@ public class Minion {
     }
 
     public String getDisplayName() {
-        // TODO: Render URL on table
-//        return name != null ? "<a href=\"" + getUrl() + "\" target=\"_blank\">" + name + "</a>" : "";
         return name != null ? name : "";
     }
 }

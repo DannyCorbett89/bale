@@ -10,7 +10,7 @@ import java.util.Map;
 @Data
 @Builder
 public class MinionRS {
-    private long id;
+    private String id;
     private String name;
     private String url;
     @JsonIgnore
