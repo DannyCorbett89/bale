@@ -10,9 +10,9 @@ import java.util.Map;
 @Data
 @Builder
 public class MinionRS {
-    private String id;
+    private long id;
     private String name;
-    private String url;
+    private String lodestoneId;
     @JsonIgnore
     private Map<String, String> players;
 

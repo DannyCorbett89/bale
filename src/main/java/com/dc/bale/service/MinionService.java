@@ -54,8 +54,9 @@ public class MinionService {
 
     private MinionRS getPlayersNeedingMinion(List<Player> players, Minion minion) {
         return MinionRS.builder()
-                .id(minion.getLodestoneId())
+                .id(minion.getId())
                 .name(minion.getDisplayName())
+                .lodestoneId(minion.getLodestoneId())
                 .players(players.stream()
                         .filter(player1 -> playerDoesNotHaveMinion(minion, player1))
                         .collect(Collectors.toList()).stream()
