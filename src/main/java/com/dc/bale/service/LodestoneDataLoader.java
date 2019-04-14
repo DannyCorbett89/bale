@@ -25,16 +25,12 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import static com.dc.bale.Constants.*;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor(onConstructor = @__(@Autowired))
 public class LodestoneDataLoader {
-    private static final String BASE_URL = "https://na.finalfantasyxiv.com/lodestone";
-    private static final String DB_URL = BASE_URL + "/playguide/db";
-    private static final String DUTY_URL = DB_URL + "/duty";
-    private static final String TRIALS_URL = DUTY_URL + "/?category2=4";
-    public static final String ITEM_URL = DB_URL + "/item";
-    private static final String MINIONS_URL = ITEM_URL + "/?category2=7&category3=81";
     private static final int REFRESH_INTERVAL = 3600000;
     private static final Object MOUNT_LOADER_LOCK = new Object();
 

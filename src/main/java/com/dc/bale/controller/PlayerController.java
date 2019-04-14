@@ -1,79 +1,87 @@
 package com.dc.bale.controller;
 
-import com.dc.bale.component.JsonConverter;
+import com.dc.bale.database.dao.PlayerRepository;
 import com.dc.bale.database.entity.FcRank;
 import com.dc.bale.database.entity.Player;
 import com.dc.bale.exception.PlayerException;
 import com.dc.bale.service.PlayerService;
 import com.dc.bale.service.RankService;
-import com.fasterxml.jackson.core.JsonProcessingException;
+import com.google.common.base.Strings;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
+
+import static com.dc.bale.Constants.SUCCESS;
 
 @Slf4j
 @RequestMapping("/players")
 @RestController
 @RequiredArgsConstructor(onConstructor = @__(@Autowired))
 public class PlayerController {
-    private final JsonConverter jsonConverter;
     private final PlayerService playerService;
+    private final PlayerRepository playerRepository;
     private final RankService rankService;
 
     @GetMapping(produces = {MediaType.APPLICATION_JSON_VALUE})
-    public ResponseEntity<String> listPlayers() {
+    public ResponseEntity<List<Player>> listPlayers() {
         List<Long> rankIds = rankService.listEnabledRanks().stream()
                 .map(FcRank::getId)
                 .collect(Collectors.toList());
         List<Player> players = playerService.listPlayers(rankIds);
-        return toResponse(players);
+        return ResponseEntity.ok(players);
+    }
+
+    @GetMapping(value = "/visible", produces = {MediaType.APPLICATION_JSON_VALUE})
+    public ResponseEntity<List<Player>> listVisiblePlayers() {
+        List<Player> players = playerRepository.findByVisibleTrue().stream()
+                .sorted(Comparator.comparing(Player::getName))
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(players);
+    }
+
+    @PostMapping(value = "/visible", produces = {MediaType.APPLICATION_JSON_VALUE})
+    public ResponseEntity<StatusResponse> setVisiblePlayers(@RequestBody List<Player> players) {
+        playerService.setPlayersVisible(players);
+        return SUCCESS;
     }
 
     @PostMapping(value = "/add", produces = {MediaType.APPLICATION_JSON_VALUE})
-    public ResponseEntity<String> addPlayer(@RequestParam("playerId") long playerId, HttpServletRequest request) {
+    public ResponseEntity<StatusResponse> addPlayer(@RequestParam("playerId") long playerId, HttpServletRequest request) {
         try {
             Player player = playerService.addPlayer(playerId);
             log.info("[{}] Added player: {}", request.getLocalAddr(), player.getName());
-            return toResponse(StatusResponse.success());
+            return SUCCESS;
         } catch (Exception e) {
-            return toErrorResponse(e.getLocalizedMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(StatusResponse.error(e.getLocalizedMessage()));
         }
     }
 
-    // TODO: DeleteMapping
-    @GetMapping(value = "/remove", produces = {MediaType.APPLICATION_JSON_VALUE})
-    public ResponseEntity<String> removePlayer(@RequestParam(value = "playerName") String playerName, HttpServletRequest request) {
+    @DeleteMapping(value = "/remove", produces = {MediaType.APPLICATION_JSON_VALUE})
+    public ResponseEntity<StatusResponse> removePlayer(@RequestParam(value = "id", required = false) Long id,
+                                                       @RequestParam(value = "name", required = false) String name,
+                                                       HttpServletRequest request) {
         try {
-            playerService.removePlayer(playerName);
-            log.info("[{}] Removed player: {}", request.getRemoteAddr(), playerName);
-            return toResponse(StatusResponse.success());
+            if (Strings.isNullOrEmpty(name) && id == null) {
+                return ResponseEntity.badRequest()
+                        .body(StatusResponse.error("Player name or id must be provided"));
+            }
+
+            Player player = playerService.removePlayer(id, name);
+            log.info("[{}] Removed player: {}", request.getRemoteAddr(), player.getName());
+            return SUCCESS;
         } catch (PlayerException e) {
-            return toErrorResponse(e.getLocalizedMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(StatusResponse.error(e.getLocalizedMessage()));
         }
-    }
-
-    private ResponseEntity<String> toErrorResponse(String message) {
-        return toResponse(StatusResponse.error(message));
-    }
-
-    private ResponseEntity<String> toResponse(Object json) {
-        String message;
-
-        try {
-            message = jsonConverter.toString(json);
-        } catch (JsonProcessingException e) {
-            message = e.getMessage();
-        }
-
-        return ResponseEntity.ok()
-                .header("Access-Control-Allow-Origin", "*")
-                .body(message);
     }
 }

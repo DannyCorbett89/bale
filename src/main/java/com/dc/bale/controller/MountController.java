@@ -1,96 +1,80 @@
 package com.dc.bale.controller;
 
-import com.dc.bale.component.JsonConverter;
 import com.dc.bale.database.entity.Mount;
 import com.dc.bale.exception.MountException;
+import com.dc.bale.model.AvailableMount;
 import com.dc.bale.model.Response;
 import com.dc.bale.service.PlayerTracker;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.transaction.Transactional;
+import java.util.List;
+
+import static com.dc.bale.Constants.SUCCESS;
 
 @Slf4j
 @RequestMapping("/mounts")
 @RestController
 @RequiredArgsConstructor(onConstructor = @__(@Autowired))
 public class MountController {
-    private final JsonConverter jsonConverter;
+
     private final PlayerTracker playerTracker;
 
     @GetMapping(produces = {MediaType.APPLICATION_JSON_VALUE})
-    public ResponseEntity<String> listMounts(@RequestParam(value = "refresh", required = false) String refresh) {
-        if (refresh != null && refresh.equals("true")) {
-            playerTracker.loadMounts();
-        }
-
+    public ResponseEntity<Response> listMounts() {
         Response response = Response.builder()
                 .lastUpdated(playerTracker.getLastUpdated())
                 .players(playerTracker.getMounts())
                 .build();
 
-        return toResponse(response);
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping(value = "/available", produces = {MediaType.APPLICATION_JSON_VALUE})
-    public ResponseEntity<String> listAvailableMounts() {
-        return toResponse(playerTracker.getAvailableMounts());
+    public ResponseEntity<List<AvailableMount>> listAvailableMounts() {
+        return ResponseEntity.ok(playerTracker.getAvailableMounts());
     }
 
     @PostMapping(value = "/add", produces = {MediaType.APPLICATION_JSON_VALUE})
-    public ResponseEntity<String> addMount(@RequestParam("name") String name, HttpServletRequest request) {
+    public ResponseEntity<StatusResponse> addMount(@RequestParam("name") String name, HttpServletRequest request) {
         if (name == null || name.isEmpty()) {
-            return toErrorResponse("Missing required parameter: name");
+            return ResponseEntity.badRequest()
+                    .body(StatusResponse.error("Missing required parameter: name"));
         }
 
         log.info("[{}] Added mount: {}", request.getRemoteAddr(), name);
 
         try {
             playerTracker.addMount(name);
-            return toResponse(StatusResponse.success());
+            return SUCCESS;
         } catch (MountException e) {
-            return toErrorResponse(e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(StatusResponse.error(e.getMessage()));
         }
     }
 
-    // TODO: DeleteMapping
     @Transactional
-    @GetMapping(value = "/remove", produces = {MediaType.APPLICATION_JSON_VALUE})
-    public ResponseEntity<String> removeMount(@RequestParam("id") long id, HttpServletRequest request) {
+    @DeleteMapping(value = "/remove", produces = {MediaType.APPLICATION_JSON_VALUE})
+    public ResponseEntity<StatusResponse> removeMount(@RequestParam("id") long id, HttpServletRequest request) {
         if (id == 0) {
-            return toErrorResponse("Missing required parameter: id");
+            return ResponseEntity.badRequest()
+                    .body(StatusResponse.error("Missing required parameter: id"));
         }
 
         try {
             Mount mount = playerTracker.removeMount(id);
             log.info("[{}] Removed mount: {}", request.getRemoteAddr(), mount.getName());
-            return toResponse(StatusResponse.success());
+            return SUCCESS;
         } catch (MountException e) {
-            return toErrorResponse(e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(StatusResponse.error(e.getMessage()));
         }
-    }
-
-    private ResponseEntity<String> toErrorResponse(String message) {
-        return toResponse(StatusResponse.error(message));
-    }
-
-    private ResponseEntity<String> toResponse(Object json) {
-        String message;
-
-        try {
-            message = jsonConverter.toString(json);
-        } catch (JsonProcessingException e) {
-            message = e.getMessage();
-        }
-
-        return ResponseEntity.ok()
-                .header("Access-Control-Allow-Origin", "*")
-                .body(message);
     }
 }

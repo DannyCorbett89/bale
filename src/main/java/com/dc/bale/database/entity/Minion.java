@@ -1,6 +1,5 @@
 package com.dc.bale.database.entity;
 
-import com.dc.bale.service.LodestoneDataLoader;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -20,10 +19,6 @@ public class Minion {
     private String name;
     @Column(name = "lodestone_id")
     private String lodestoneId;
-
-    public String getUrl() {
-        return LodestoneDataLoader.ITEM_URL + "/" + lodestoneId;
-    }
 
     public String getDisplayName() {
         return name != null ? name : "";
