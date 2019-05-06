@@ -26,7 +26,6 @@ import static org.mockito.Mockito.*;
 public class PlayerTrackerTest {
     private static final String USSA = "Ussa Xellus";
     private static final String SYTH = "Syth Rilletta";
-    private static final String SCULLAI = "Scullai Ponga";
     private MountRepository mountRepository = mock(MountRepository.class);
     private PlayerService playerService = mock(PlayerService.class);
     private FcLoader fcLoader = mock(FcLoader.class);
@@ -38,7 +37,6 @@ public class PlayerTrackerTest {
     private ArgumentCaptor<List<Player>> playersCaptor;
 
     private List<MountRS> mountResponse;
-    private MountRS resultMount;
     private Map<String, Player> playerMap = new HashMap<>();
     private List<Player> visiblePlayers = new ArrayList<>();
     private Mount mount = mock(Mount.class);
@@ -277,32 +275,9 @@ public class PlayerTrackerTest {
         verify(fcLoader, times(1)).loadPlayerData();
     }
 
-    private void thenPlayerAtIndexShouldBe(int index, String name) {
-        MountRS mountRS = mountResponse.get(index);
-        assertEquals(name, mountRS.getName());
-    }
-
-    private void thenMountAtIndexShouldBe(int index, String name) {
-        MountRS mountRS = mountResponse.get(0);
-        assertEquals(name, mountRS.getName());
-    }
-
-    private void thenResponseShouldHaveThreeMounts() {
-        assertEquals(3, mountResponse.size());
-    }
-
-    private void thenPlayerShouldHaveValues() {
-        MountRS mountRS = mountResponse.get(0);
-        assertEquals(USSA, mountRS.getName());
-    }
-
-    private void thenMountShouldNotExist() {
-        assertEquals(0, mountResponse.size());
-    }
-
     private void thenMountShouldExist() {
         assertEquals(2, mountResponse.size());
-        resultMount = mountResponse.get(1);
+        MountRS resultMount = mountResponse.get(1);
         assertNotNull(resultMount);
         assertEquals(3L, resultMount.getId());
         assertEquals("b2", resultMount.getName());
@@ -310,28 +285,6 @@ public class PlayerTrackerTest {
         Map<String, String> players = resultMount.getPlayers();
         assertEquals(2, players.size());
         assertEquals("X", players.get("player-1"));
-    }
-
-    private void thenMountShouldHaveValues() {
-        assertEquals(1L, resultMount.getId());
-        assertEquals("Mount 1", resultMount.getName());
-        assertEquals("Instance", resultMount.getInstance());
-    }
-
-    private void thenResponseShouldHavePlayers(int numPlayers) {
-        assertNotNull(mountResponse);
-        assertEquals(numPlayers, mountResponse.size());
-    }
-
-    private void thenNoPlayersShouldHaveMount() {
-        assertEquals(2, mountResponse.size());
-
-        MountRS mountRS = mountResponse.get(0);
-        Map<String, String> players = mountRS.getPlayers();
-        assertFalse(players.isEmpty());
-        for (String value : players.values()) {
-            assertEquals("X", value);
-        }
     }
 
     private void thenPlayerShouldBeDeleted() {

@@ -7,9 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import javax.persistence.*;
-import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 @Entity
 @Data
@@ -39,11 +37,8 @@ public class Player {
             inverseJoinColumns = @JoinColumn(name = "minion_id", referencedColumnName = "id"))
     private Set<Minion> minions;
 
-    public Set<Mount> getMissingMounts(List<Mount> totalMounts) {
-        return totalMounts.stream()
-                .filter(Mount::isVisible)
-                .map(mount -> !mounts.contains(mount) ? mount : Mount.builder().id(mount.getId()).build())
-                .collect(Collectors.toSet());
+    public String getColumnKey() {
+        return "player-" + id;
     }
 
     public void clear() {

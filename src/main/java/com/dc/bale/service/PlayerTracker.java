@@ -39,7 +39,7 @@ public class PlayerTracker {
         List<Player> visiblePlayers = playerService.getVisiblePlayers();
         List<Mount> totalMounts = mountRepository.findAll();
         Map<Long, Long> ilevels = trialService.getMountItemLevels();
-//
+
         return totalMounts.stream()
                 .filter(mount -> anyPlayerNeedsMount(mount, visiblePlayers))
                 .map(mount -> getPlayersNeedingMount(visiblePlayers, mount))
@@ -148,6 +148,7 @@ public class PlayerTracker {
 
     public List<Column> getColumns() {
         List<Player> visiblePlayers = playerService.getVisiblePlayers();
+        Map<String, Integer> numMounts = visiblePlayers.stream().collect(Collectors.toMap(Player::getColumnKey, player -> player.getMounts().size()));
         List<Column> columns = new ArrayList<>();
         columns.add(Column.builder()
                 .key("name")
@@ -157,14 +158,14 @@ public class PlayerTracker {
                 .build());
         columns.addAll(visiblePlayers.stream()
                 .map(this::getColumn)
-                .sorted(Comparator.comparing(Column::getName))
+                .sorted(Comparator.comparingInt(column -> numMounts.getOrDefault(column.getKey(), 0)))
                 .collect(Collectors.toList()));
         return columns;
     }
 
     private Column getColumn(Player player) {
         return Column.builder()
-                .key("player-" + player.getId())
+                .key(player.getColumnKey())
                 .name(player.getName())
                 .width(player.getName().length() * WIDTH_MODIFIER)
                 .build();
