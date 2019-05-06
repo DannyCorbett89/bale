@@ -4,6 +4,7 @@ import com.dc.bale.database.dao.PlayerRepository;
 import com.dc.bale.database.entity.Player;
 import com.dc.bale.exception.PlayerException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -11,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor(onConstructor = @__(@Autowired))
 public class PlayerService {
@@ -52,5 +54,19 @@ public class PlayerService {
                 .peek(player -> player.setVisible(visibleMap.get(player.getId())))
                 .collect(Collectors.toList());
         playerRepository.save(updatedPlayers);
+    }
+
+    Map<String, Player> getPlayerMap() {
+        return playerRepository.findAll().stream()
+                .collect(Collectors.toMap(Player::getName, player -> player));
+    }
+
+    void deletePlayers(List<Player> players) {
+        log.info("Deleting players: " + players.toString());
+        playerRepository.delete(players);
+    }
+
+    List<Player> getVisiblePlayers() {
+        return playerRepository.findByVisibleTrue();
     }
 }

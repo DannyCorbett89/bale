@@ -129,6 +129,21 @@ public class FcLoader {
         return 1;
     }
 
+    String getFCPageContent() {
+        return getFCPageContent(0);
+    }
+
+    String getFCPageContent(int page) {
+        Config freeCompanyUrl = configRepository.findByName("freeCompanyUrl");
+        String url = BASE_URL + freeCompanyUrl.getValue();
+
+        if (page >= 1) {
+            url += "?page=" + page;
+        }
+
+        return httpClient.get(url);
+    }
+
     public class PlayerLoader extends Thread {
         private Player player;
         private Map<String, Mount> totalMounts;
