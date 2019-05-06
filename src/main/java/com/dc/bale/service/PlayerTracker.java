@@ -5,8 +5,8 @@ import com.dc.bale.database.entity.Mount;
 import com.dc.bale.database.entity.Player;
 import com.dc.bale.exception.MountException;
 import com.dc.bale.model.AvailableMount;
+import com.dc.bale.model.Column;
 import com.dc.bale.model.MountRS;
-import com.dc.bale.model.PlayerRS;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -22,6 +22,8 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor(onConstructor = @__(@Autowired))
 public class PlayerTracker {
+    private static final int WIDTH_MODIFIER = 9;
+
     private final MountRepository mountRepository;
     private final PlayerService playerService;
     private final FcLoader fcLoader;
@@ -33,34 +35,37 @@ public class PlayerTracker {
         return lastUpdated;
     }
 
-    public List<PlayerRS> getMounts() {
+    public List<MountRS> getMounts() {
         List<Player> visiblePlayers = playerService.getVisiblePlayers();
         List<Mount> totalMounts = mountRepository.findAll();
-
-        List<PlayerRS> players = visiblePlayers.stream().map(player -> PlayerRS.builder()
-                .name(player.getName())
-                .mounts(player.getMissingMounts(totalMounts).stream().map(mount -> MountRS.builder()
-                        .id(mount.getId())
-                        .name(mount.getName())
-                        .instance(trialService.getInstance(mount))
-                        .build()).collect(Collectors.toList()))
-                .build()).collect(Collectors.toList());
-
-        for (PlayerRS player : players) {
-            for (int i = player.getMounts().size() - 1; i >= 0; i--) {
-                MountRS mount = player.getMounts().get(i);
-                if (!anyPlayerHasMount(players, mount)) {
-                    player.getMounts().remove(i);
-                }
-            }
-        }
-
         Map<Long, Long> ilevels = trialService.getMountItemLevels();
+//
+        return totalMounts.stream()
+                .filter(mount -> anyPlayerNeedsMount(mount, visiblePlayers))
+                .map(mount -> getPlayersNeedingMount(visiblePlayers, mount))
+                .sorted((mount1, mount2) ->
+                        Long.compare(ilevels.getOrDefault(mount2.getId(), 0L),
+                                ilevels.getOrDefault(mount1.getId(), 0L)))
+                .collect(Collectors.toList());
+    }
 
-        players.sort((o1, o2) -> Long.compare(o2.numMounts(), o1.numMounts()));
-        players.forEach(player -> player.getMounts().sort(Comparator.comparingLong(mount -> ilevels.getOrDefault(mount.getId(), 0L))));
+    private boolean anyPlayerNeedsMount(Mount mount, List<Player> players) {
+        return players.stream().anyMatch(player -> !player.hasMount(mount.getName()));
+    }
 
-        return players;
+    private MountRS getPlayersNeedingMount(List<Player> players, Mount mount) {
+        return MountRS.builder()
+                .id(mount.getId())
+                .name(trialService.getInstance(mount))
+                .players(players.stream()
+                        .filter(player -> playerDoesNotHaveMount(mount, player))
+                        .collect(Collectors.toMap(player -> "player-" + player.getId(), player -> "X")))
+                .build();
+    }
+
+    private boolean playerDoesNotHaveMount(Mount mount, Player player) {
+        return player.getMounts().stream()
+                .noneMatch(playerMount -> playerMount.getId() == mount.getId());
     }
 
     public void addMount(String name) throws MountException {
@@ -141,15 +146,27 @@ public class PlayerTracker {
                 .collect(Collectors.toList());
     }
 
-    private boolean anyPlayerHasMount(List<PlayerRS> players, MountRS mount) {
-        for (PlayerRS player : players) {
-            for (MountRS mountRS : player.getMounts()) {
-                if (mountRS.getId() == mount.getId() && mountRS.getName() != null) {
-                    return true;
-                }
-            }
-        }
+    public List<Column> getColumns() {
+        List<Player> visiblePlayers = playerService.getVisiblePlayers();
+        List<Column> columns = new ArrayList<>();
+        columns.add(Column.builder()
+                .key("name")
+                .name("Mount Name")
+                .frozen(true)
+                .width(100)
+                .build());
+        columns.addAll(visiblePlayers.stream()
+                .map(this::getColumn)
+                .sorted(Comparator.comparing(Column::getName))
+                .collect(Collectors.toList()));
+        return columns;
+    }
 
-        return false;
+    private Column getColumn(Player player) {
+        return Column.builder()
+                .key("player-" + player.getId())
+                .name(player.getName())
+                .width(player.getName().length() * WIDTH_MODIFIER)
+                .build();
     }
 }

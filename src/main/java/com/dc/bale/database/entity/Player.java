@@ -63,7 +63,7 @@ public class Player {
         }
     }
 
-    private boolean hasMount(String mountName) {
+    public boolean hasMount(String mountName) {
         return mounts.stream().anyMatch(mount -> mount.getName().equals(mountName));
     }
 

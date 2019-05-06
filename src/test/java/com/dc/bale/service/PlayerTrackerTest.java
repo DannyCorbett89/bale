@@ -6,7 +6,6 @@ import com.dc.bale.database.entity.Player;
 import com.dc.bale.exception.MountException;
 import com.dc.bale.model.AvailableMount;
 import com.dc.bale.model.MountRS;
-import com.dc.bale.model.PlayerRS;
 import com.google.common.collect.ImmutableMap;
 import org.apache.commons.lang3.StringUtils;
 import org.junit.Before;
@@ -38,7 +37,7 @@ public class PlayerTrackerTest {
     @Captor
     private ArgumentCaptor<List<Player>> playersCaptor;
 
-    private List<PlayerRS> playerResponse;
+    private List<MountRS> mountResponse;
     private MountRS resultMount;
     private Map<String, Player> playerMap = new HashMap<>();
     private List<Player> visiblePlayers = new ArrayList<>();
@@ -52,64 +51,14 @@ public class PlayerTrackerTest {
     }
 
     @Test
-    public void testGetMounts_NullMountName() {
-        givenPlayer(USSA, (String) null);
+    public void testGetMounts_MountExists() {
         givenTotalMounts();
-        whenGetMounts();
-        thenResponseShouldHavePlayers(1);
-        thenPlayerShouldHaveValues();
-        thenMountShouldNotExist();
-    }
-
-    @Test
-    public void testGetMounts_ValidMountName() {
-        givenPlayer(USSA, "Mount 1");
         givenInstanceName();
-        givenTotalMounts();
-        whenGetMounts();
-        thenResponseShouldHavePlayers(1);
-        thenPlayerShouldHaveValues();
-        thenMountShouldExist();
-        thenMountShouldHaveValues();
-    }
-
-    @Test
-    public void testGetMounts_NoPlayerHasMount() {
-        givenPlayer(USSA, "Mount 1");
-        givenInstanceName();
-        givenTotalMounts();
-        whenGetMounts();
-        thenResponseShouldHavePlayers(1);
-        thenPlayerShouldHaveValues();
-        thenMountShouldExist();
-        thenMountShouldHaveValues();
-    }
-
-    @Test
-    public void testGetMounts_PlayersAreSortedByNumMounts() {
-        givenPlayer(USSA, "m1", "m2", "m3");
-        givenPlayer(SYTH, "m1", "m2", "m3", "m4", "m5");
-        givenPlayer(SCULLAI, "m1", "m2", "m3", "m4");
-        givenInstanceName();
+        givenPlayer(USSA, "m2");
+        givenPlayer(SYTH, "m1", "m2");
         givenILevels();
         whenGetMounts();
-        thenResponseShouldHavePlayers(3);
-        thenPlayerAtIndexShouldBe(0, SYTH);
-        thenPlayerAtIndexShouldBe(1, SCULLAI);
-        thenPlayerAtIndexShouldBe(2, USSA);
-    }
-
-    @Test
-    public void testGetMounts_MountsAreSortedByIlvl() {
-        givenPlayer(USSA, "m1", "m2", "m3");
-        givenInstanceName();
-        givenILevels();
-        whenGetMounts();
-        thenResponseShouldHavePlayers(1);
-        thenResponseShouldHaveThreeMounts();
-        thenMountAtIndexShouldBe(0, "m3");
-        thenMountAtIndexShouldBe(1, "m1");
-        thenMountAtIndexShouldBe(2, "m2");
+        thenMountShouldExist();
     }
 
     @Test
@@ -218,17 +167,23 @@ public class PlayerTrackerTest {
     }
 
     private void givenInstanceName() {
-        when(trialService.getInstance(any(Mount.class))).thenReturn("Instance");
+        when(trialService.getInstance(any(Mount.class))).thenReturn("b1", "b2", "b3");
     }
 
     private void givenTotalMounts() {
         List<Mount> mounts = new ArrayList<>();
         Mount mount1 = mock(Mount.class);
-        when(mount1.getName()).thenReturn("Mount 1");
+        when(mount1.getId()).thenReturn(1L);
+        when(mount1.getName()).thenReturn("m1");
         mounts.add(mount1);
         Mount mount2 = mock(Mount.class);
-        when(mount1.getName()).thenReturn("Mount 2");
+        when(mount2.getId()).thenReturn(2L);
+        when(mount2.getName()).thenReturn("m2");
         mounts.add(mount2);
+        Mount mount3 = mock(Mount.class);
+        when(mount3.getId()).thenReturn(3L);
+        when(mount3.getName()).thenReturn("m3");
+        mounts.add(mount3);
         when(mountRepository.findAll()).thenReturn(mounts);
     }
 
@@ -250,6 +205,7 @@ public class PlayerTrackerTest {
 
     private void givenPlayer(String playerName, String... mountNames) {
         Player player = mock(Player.class);
+        when(player.getId()).thenReturn(visiblePlayers.size() + 1L);
         when(player.getName()).thenReturn(playerName);
 
         Set<Mount> mounts = new HashSet<>();
@@ -258,8 +214,9 @@ public class PlayerTrackerTest {
             when(mount.getId()).thenReturn(mounts.size() + 1L);
             when(mount.getName()).thenReturn(mountName);
             mounts.add(mount);
+            when(player.hasMount(eq(mountName))).thenReturn(true);
         }
-        when(player.getMissingMounts(anyListOf(Mount.class))).thenReturn(mounts);
+        when(player.getMounts()).thenReturn(mounts);
 
         playerMap.put(playerName, player);
         visiblePlayers.add(player);
@@ -287,7 +244,7 @@ public class PlayerTrackerTest {
     }
 
     private void whenGetMounts() {
-        playerResponse = playerTracker.getMounts();
+        mountResponse = playerTracker.getMounts();
     }
 
     private void whenCleanOldPlayers() {
@@ -321,38 +278,38 @@ public class PlayerTrackerTest {
     }
 
     private void thenPlayerAtIndexShouldBe(int index, String name) {
-        PlayerRS playerRS = playerResponse.get(index);
-        assertEquals(name, playerRS.getName());
+        MountRS mountRS = mountResponse.get(index);
+        assertEquals(name, mountRS.getName());
     }
 
     private void thenMountAtIndexShouldBe(int index, String name) {
-        PlayerRS playerRS = playerResponse.get(0);
-        MountRS mountRS = playerRS.getMounts().get(index);
+        MountRS mountRS = mountResponse.get(0);
         assertEquals(name, mountRS.getName());
     }
 
     private void thenResponseShouldHaveThreeMounts() {
-        PlayerRS playerRS = playerResponse.get(0);
-        assertEquals(3, playerRS.getMounts().size());
+        assertEquals(3, mountResponse.size());
     }
 
     private void thenPlayerShouldHaveValues() {
-        PlayerRS playerRS = playerResponse.get(0);
-        assertEquals(USSA, playerRS.getName());
+        MountRS mountRS = mountResponse.get(0);
+        assertEquals(USSA, mountRS.getName());
     }
 
     private void thenMountShouldNotExist() {
-        PlayerRS playerRS = playerResponse.get(0);
-        List<MountRS> mounts = playerRS.getMounts();
-        assertEquals(0, mounts.size());
+        assertEquals(0, mountResponse.size());
     }
 
     private void thenMountShouldExist() {
-        PlayerRS playerRS = playerResponse.get(0);
-        List<MountRS> mounts = playerRS.getMounts();
-        assertEquals(1, mounts.size());
-        resultMount = mounts.get(0);
+        assertEquals(2, mountResponse.size());
+        resultMount = mountResponse.get(1);
         assertNotNull(resultMount);
+        assertEquals(3L, resultMount.getId());
+        assertEquals("b2", resultMount.getName());
+
+        Map<String, String> players = resultMount.getPlayers();
+        assertEquals(2, players.size());
+        assertEquals("X", players.get("player-1"));
     }
 
     private void thenMountShouldHaveValues() {
@@ -362,8 +319,19 @@ public class PlayerTrackerTest {
     }
 
     private void thenResponseShouldHavePlayers(int numPlayers) {
-        assertNotNull(playerResponse);
-        assertEquals(numPlayers, playerResponse.size());
+        assertNotNull(mountResponse);
+        assertEquals(numPlayers, mountResponse.size());
+    }
+
+    private void thenNoPlayersShouldHaveMount() {
+        assertEquals(2, mountResponse.size());
+
+        MountRS mountRS = mountResponse.get(0);
+        Map<String, String> players = mountRS.getPlayers();
+        assertFalse(players.isEmpty());
+        for (String value : players.values()) {
+            assertEquals("X", value);
+        }
     }
 
     private void thenPlayerShouldBeDeleted() {
