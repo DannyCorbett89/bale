@@ -8,6 +8,7 @@ import com.dc.bale.model.AvailableMount;
 import com.dc.bale.model.Column;
 import com.dc.bale.model.MountRS;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -19,6 +20,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor(onConstructor = @__(@Autowired))
 public class PlayerTracker {
@@ -133,6 +135,10 @@ public class PlayerTracker {
                 .filter(player -> !fcPlayers.contains(player.getName()))
                 .collect(Collectors.toList());
 
+        if (!oldPlayers.isEmpty()) {
+            log.info("FC players: {}", fcPlayers.toString());
+        }
+
         playerService.deletePlayers(oldPlayers);
     }
 
@@ -146,7 +152,7 @@ public class PlayerTracker {
                 .collect(Collectors.toList());
     }
 
-    public List<Column> getColumns() {
+    public List<Column> getColumns(int width) {
         List<Player> visiblePlayers = playerService.getVisiblePlayers();
         Map<String, Integer> numMounts = visiblePlayers.stream().collect(Collectors.toMap(Player::getColumnKey, player -> player.getMounts().size()));
         List<Column> columns = new ArrayList<>();
@@ -154,7 +160,7 @@ public class PlayerTracker {
                 .key("name")
                 .name("Mount Name")
                 .frozen(true)
-                .width(100)
+                .width(width)
                 .build());
         columns.addAll(visiblePlayers.stream()
                 .map(this::getColumn)

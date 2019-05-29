@@ -24,7 +24,7 @@ public class MinionController {
     public ResponseEntity<MinionsResponse> listMinions() {
         MinionsResponse response = MinionsResponse.builder()
                 .lastUpdated(playerTracker.getLastUpdated())
-                .columns(playerTracker.getColumns())
+                .columns(playerTracker.getColumns(200))
                 .players(minionService.getMinions())
                 .build();
 

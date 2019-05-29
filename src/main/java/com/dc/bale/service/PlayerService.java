@@ -62,7 +62,7 @@ public class PlayerService {
     }
 
     void deletePlayers(List<Player> players) {
-        log.info("Deleting players: " + players.toString());
+        log.info("Deleting players: " + players.stream().map(Player::getName).collect(Collectors.joining()));
         playerRepository.delete(players);
     }
 
