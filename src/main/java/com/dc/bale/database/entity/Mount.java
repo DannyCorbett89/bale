@@ -21,5 +21,6 @@ public class Mount {
     private long id;
     private String name;
     private boolean visible; // TODO: Remove field and associated code
+    private String hash;
 }
                       

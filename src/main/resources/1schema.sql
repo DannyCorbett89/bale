@@ -26,6 +26,7 @@ create table mount
     id      int  not null auto_increment,
     name    varchar(191),
     visible bool not null,
+    hash  varchar(191),
     primary key (id),
     unique (name)
 );
@@ -48,6 +49,7 @@ create table player
     visible bool         not null,
     url     varchar(191) not null,
     rank_id int,
+    icon varchar(191) not null,
     primary key (id),
     foreign key (rank_id) references fc_rank (id),
     unique (name)
@@ -69,6 +71,7 @@ create table minion
     id           int not null auto_increment,
     name         varchar(191),
     lodestone_id varchar(191),
+    hash  varchar(191),
     primary key (id)
 );
 

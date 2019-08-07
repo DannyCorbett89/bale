@@ -9,4 +9,6 @@ public interface MountRepository extends JpaRepository<Mount, Long> {
     Mount findByName(String name);
 
     List<Mount> findAllByVisible(boolean visible);
+
+    Mount findByHash(String hash);
 }

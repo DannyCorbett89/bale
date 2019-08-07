@@ -6,13 +6,17 @@ import com.dc.bale.database.entity.Minion;
 import com.dc.bale.database.entity.Player;
 import com.dc.bale.model.MinionRS;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor(onConstructor = @__(@Autowired))
 public class MinionService {
@@ -47,5 +51,34 @@ public class MinionService {
     private boolean playerDoesNotHaveMinion(Minion minion, Player player1) {
         return player1.getMinions().stream()
                 .noneMatch(playerMinion -> playerMinion.getId() == minion.getId());
+    }
+
+    synchronized Optional<Minion> getAndUpdateMinionForHash(Player player, String hash, Supplier<String> lookupMinionNameFromHash) {
+        Minion minion = minionRepository.findByHash(hash);
+        if (minion != null) {
+            return Optional.of(minion);
+        } else {
+            String name = lookupMinionNameFromHash.get();
+
+            if (name != null) {
+                Minion minionByName = minionRepository.findByName(name);
+
+                if (minionByName != null) {
+                    minionByName.setHash(hash);
+                    minionRepository.save(minionByName);
+                } else {
+                    minionByName = Minion.builder()
+                            .name(name)
+                            .hash(hash)
+                            .build();
+                    minionRepository.save(minionByName);
+                }
+
+                return Optional.of(minionByName);
+            } else {
+                log.error("Unable to load minion name for hash {}, player {}", hash, player.getName());
+                return Optional.empty();
+            }
+        }
     }
 }

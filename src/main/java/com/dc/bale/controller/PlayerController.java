@@ -29,14 +29,10 @@ import static com.dc.bale.Constants.SUCCESS;
 public class PlayerController {
     private final PlayerService playerService;
     private final PlayerRepository playerRepository;
-    private final RankService rankService;
 
     @GetMapping(produces = {MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<List<Player>> listPlayers() {
-        List<Long> rankIds = rankService.listEnabledRanks().stream()
-                .map(FcRank::getId)
-                .collect(Collectors.toList());
-        List<Player> players = playerService.listPlayers(rankIds);
+        List<Player> players = playerService.listPlayers();
         return ResponseEntity.ok(players);
     }
 
@@ -55,10 +51,10 @@ public class PlayerController {
     }
 
     @PostMapping(value = "/add", produces = {MediaType.APPLICATION_JSON_VALUE})
-    public ResponseEntity<StatusResponse> addPlayer(@RequestParam("playerId") long playerId, HttpServletRequest request) {
+    public ResponseEntity<StatusResponse> addPlayer(@RequestParam("ids") List<Long> ids, HttpServletRequest request) {
         try {
-            Player player = playerService.addPlayer(playerId);
-            log.info("[{}] Added player: {}", request.getLocalAddr(), player.getName());
+            List<Player> players = playerService.addPlayers(ids);
+            log.info("[{}] Added players: {}", request.getLocalAddr(), players.stream().map(Player::getName).collect(Collectors.toList()));
             return SUCCESS;
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)

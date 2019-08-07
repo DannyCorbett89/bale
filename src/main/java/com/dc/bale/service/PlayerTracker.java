@@ -39,7 +39,7 @@ public class PlayerTracker {
 
     public List<MountRS> getMounts() {
         List<Player> visiblePlayers = playerService.getVisiblePlayers();
-        List<Mount> totalMounts = mountRepository.findAll();
+        List<Mount> totalMounts = mountRepository.findAllByVisible(true);
         Map<Long, Long> ilevels = trialService.getMountItemLevels();
 
         return totalMounts.stream()
@@ -94,7 +94,6 @@ public class PlayerTracker {
         return mount;
     }
 
-    @PostConstruct
     @Scheduled(cron = "0 0 * * * *")
     public void loadMounts() {
         fcLoader.loadPlayerData();
@@ -152,15 +151,16 @@ public class PlayerTracker {
                 .collect(Collectors.toList());
     }
 
-    public List<Column> getColumns(int width) {
+    public List<Column> getColumns(int firstColumnWidth, String firstColumnName) {
         List<Player> visiblePlayers = playerService.getVisiblePlayers();
         Map<String, Integer> numMounts = visiblePlayers.stream().collect(Collectors.toMap(Player::getColumnKey, player -> player.getMounts().size()));
         List<Column> columns = new ArrayList<>();
         columns.add(Column.builder()
                 .key("name")
-                .name("Mount Name")
+                .name(firstColumnName)
                 .frozen(true)
-                .width(width)
+                .filterable(true)
+                .width(firstColumnWidth)
                 .build());
         columns.addAll(visiblePlayers.stream()
                 .map(this::getColumn)

@@ -19,6 +19,7 @@ public class Minion {
     private String name;
     @Column(name = "lodestone_id")
     private String lodestoneId;
+    private String hash;
 
     public String getDisplayName() {
         return name != null ? name : "";

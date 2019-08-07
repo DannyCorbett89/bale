@@ -18,10 +18,10 @@ import java.util.stream.Collectors;
 public class PlayerService {
     private final PlayerRepository playerRepository;
 
-    public Player addPlayer(long playerId) {
-        Player player = playerRepository.findOne(playerId);
-        player.setVisible(true);
-        return playerRepository.save(player);
+    public List<Player> addPlayers(List<Long> ids) {
+        List<Player> players = playerRepository.findByIdIsIn(ids);
+        players.forEach(player -> player.setVisible(true));
+        return playerRepository.save(players);
     }
 
     public Player removePlayer(Long id, String name) throws PlayerException {
@@ -43,8 +43,8 @@ public class PlayerService {
         }
     }
 
-    public List<Player> listPlayers(List<Long> rankIds) {
-        return playerRepository.findByVisibleFalseAndRankIdIsInOrderByName(rankIds);
+    public List<Player> listPlayers() {
+        return playerRepository.findByVisibleFalseOrderByName();
     }
 
     public void setPlayersVisible(List<Player> players) {

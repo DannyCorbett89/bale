@@ -10,5 +10,7 @@ public interface PlayerRepository extends JpaRepository<Player, Long> {
 
     List<Player> findByVisibleTrue();
 
-    List<Player> findByVisibleFalseAndRankIdIsInOrderByName(List<Long> rankIcons);
+    List<Player> findByVisibleFalseOrderByName();
+
+    List<Player> findByIdIsIn(List<Long> ids);
 }

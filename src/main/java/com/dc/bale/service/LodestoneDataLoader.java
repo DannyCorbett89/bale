@@ -39,6 +39,7 @@ public class LodestoneDataLoader {
     private final TrialRepository trialRepository;
     private final MountIdentifierRepository mountIdentifierRepository;
     private final MinionRepository minionRepository;
+    private final PlayerTracker playerTracker;
 
     private String mountIdentifiersRegex;
 
@@ -54,6 +55,7 @@ public class LodestoneDataLoader {
     @PostConstruct
     private void loadAllTrials() {
         loadTrials(false);
+        playerTracker.loadMounts();
     }
 
     @Scheduled(cron = "0 10 * * * *")
@@ -74,7 +76,8 @@ public class LodestoneDataLoader {
     private void loadTrials(boolean latestPatch) {
         String trialsUrl = getFullUrl(TRIALS_URL, latestPatch);
         String content = httpClient.get(trialsUrl);
-        Set<String> trialNames = trialRepository.findAll().stream()
+        List<Trial> trials = trialRepository.findAll();
+        Set<String> trialNames = trials.stream()
                 .map(Trial::getName)
                 .collect(Collectors.toSet());
         int numPages = getNumPagesDB(content, trialsUrl);

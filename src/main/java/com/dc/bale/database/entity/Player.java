@@ -21,6 +21,7 @@ public class Player {
     private String name;
     private boolean visible;
     private String url;
+    private String icon;
 
     @OneToOne
     private FcRank rank;

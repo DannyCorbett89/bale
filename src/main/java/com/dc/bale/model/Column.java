@@ -10,4 +10,5 @@ public class Column {
     private String name;
     private int width;
     private boolean frozen;
+    private boolean filterable;
 }

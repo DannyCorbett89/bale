@@ -182,7 +182,7 @@ public class PlayerTrackerTest {
         when(mount3.getId()).thenReturn(3L);
         when(mount3.getName()).thenReturn("m3");
         mounts.add(mount3);
-        when(mountRepository.findAll()).thenReturn(mounts);
+        when(mountRepository.findAllByVisible(eq(true))).thenReturn(mounts);
     }
 
     private void givenFCPageContent() {
