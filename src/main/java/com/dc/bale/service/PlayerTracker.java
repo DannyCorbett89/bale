@@ -153,7 +153,7 @@ public class PlayerTracker {
 
     public List<Column> getColumns(int firstColumnWidth, String firstColumnName) {
         List<Player> visiblePlayers = playerService.getVisiblePlayers();
-        Map<String, Integer> numMounts = visiblePlayers.stream().collect(Collectors.toMap(Player::getColumnKey, player -> player.getMounts().size()));
+        Map<String, Long> numMounts = visiblePlayers.stream().collect(Collectors.toMap(Player::getColumnKey, Player::getNumVisibleMounts));
         List<Column> columns = new ArrayList<>();
         columns.add(Column.builder()
                 .key("name")
@@ -164,7 +164,7 @@ public class PlayerTracker {
                 .build());
         columns.addAll(visiblePlayers.stream()
                 .map(this::getColumn)
-                .sorted(Comparator.comparingInt(column -> numMounts.getOrDefault(column.getKey(), 0)))
+                .sorted(Comparator.comparingLong(column -> numMounts.getOrDefault(column.getKey(), 0L)))
                 .collect(Collectors.toList()));
         return columns;
     }

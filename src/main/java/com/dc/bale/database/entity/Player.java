@@ -66,4 +66,8 @@ public class Player {
     public boolean hasMinion(String minionName) {
         return minions.stream().anyMatch(minion -> minion.getName().equals(minionName));
     }
+
+    public long getNumVisibleMounts() {
+        return mounts.stream().filter(Mount::isVisible).count();
+    }
 }
