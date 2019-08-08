@@ -100,6 +100,7 @@ public class FcLoader {
         Player player;
         if (players.containsKey(playerName)) {
             player = players.get(playerName);
+            player.setIcon(playerIcon);
 
             if (player.getRank() == null || player.getRank().getId() != rank.getId()) {
                 player.setRank(rank);
