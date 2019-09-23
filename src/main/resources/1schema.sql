@@ -1,12 +1,3 @@
-drop table if exists mount_identifier;
-create table mount_identifier
-(
-    id   int not null auto_increment,
-    name varchar(191),
-    primary key (id),
-    unique (name)
-);
-
 drop table if exists trial;
 create table trial
 (
@@ -26,7 +17,7 @@ create table mount
     id      int  not null auto_increment,
     name    varchar(191),
     visible bool not null,
-    hash  varchar(191),
+    hash    varchar(191),
     primary key (id),
     unique (name)
 );
@@ -49,7 +40,7 @@ create table player
     visible bool         not null,
     url     varchar(191) not null,
     rank_id int,
-    icon varchar(191) not null,
+    icon    varchar(191) not null,
     primary key (id),
     foreign key (rank_id) references fc_rank (id),
     unique (name)
@@ -71,7 +62,7 @@ create table minion
     id           int not null auto_increment,
     name         varchar(191),
     lodestone_id varchar(191),
-    hash  varchar(191),
+    hash         varchar(191),
     primary key (id)
 );
 
@@ -84,11 +75,22 @@ create table minion_link
     primary key (id)
 );
 
+drop table if exists mount_item;
+create table mount_item
+(
+    id         int not null auto_increment,
+    item_name  varchar(191),
+    mount_name varchar(191),
+    primary key (id),
+    unique (item_name)
+);
+
 drop table if exists config;
 create table config
 (
     id    int not null auto_increment,
     name  varchar(191),
     value varchar(191),
-    primary key (id)
+    primary key (id),
+    unique (name)
 );

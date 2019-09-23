@@ -1,13 +1,13 @@
 package com.dc.bale.service;
 
+import com.dc.bale.Constants;
 import com.dc.bale.component.HttpClient;
 import com.dc.bale.database.dao.MinionRepository;
-import com.dc.bale.database.dao.MountIdentifierRepository;
-import com.dc.bale.database.dao.MountRepository;
+import com.dc.bale.database.dao.MountLinkRepository;
 import com.dc.bale.database.dao.TrialRepository;
 import com.dc.bale.database.entity.Minion;
 import com.dc.bale.database.entity.Mount;
-import com.dc.bale.database.entity.MountIdentifier;
+import com.dc.bale.database.entity.MountLink;
 import com.dc.bale.database.entity.Trial;
 import com.dc.bale.exception.UnableToParseNumPagesException;
 import lombok.RequiredArgsConstructor;
@@ -31,26 +31,14 @@ import static com.dc.bale.Constants.*;
 @Service
 @RequiredArgsConstructor(onConstructor = @__(@Autowired))
 public class LodestoneDataLoader {
-    private static final int REFRESH_INTERVAL = 3600000;
-    private static final Object MOUNT_LOADER_LOCK = new Object();
 
     private final HttpClient httpClient;
-    private final MountRepository mountRepository;
+    private final MountService mountService;
     private final TrialRepository trialRepository;
-    private final MountIdentifierRepository mountIdentifierRepository;
     private final MinionRepository minionRepository;
     private final PlayerTracker playerTracker;
-
-    private String mountIdentifiersRegex;
-
-    @PostConstruct
-    @Scheduled(fixedRate = REFRESH_INTERVAL)
-    private void updateRegex() {
-        List<String> mountIdentifiers = mountIdentifierRepository.findAll().stream()
-                .map(MountIdentifier::getName)
-                .collect(Collectors.toList());
-        mountIdentifiersRegex = "(" + StringUtils.join(mountIdentifiers, "|") + ")";
-    }
+    private final MountItemService mountItemService;
+    private final MountLinkRepository mountLinkRepository;
 
     @PostConstruct
     private void loadAllTrials() {
@@ -132,24 +120,36 @@ public class LodestoneDataLoader {
                 }
                 trial.setBoss(boss);
 
-                Pattern mountPattern = Pattern.compile("<a href=\"/lodestone/playguide/db/item/.+?>(.+?) " + mountIdentifiersRegex + "</a>");
-                Matcher mountMatcher = mountPattern.matcher(content);
+                Pattern itemPattern = Pattern.compile("<a href=\"/lodestone/playguide/db/item/(.+?)/\".+?>(.+?)</a>");
+                Matcher itemMatcher = itemPattern.matcher(content);
                 List<Mount> mounts = new ArrayList<>();
 
-                while (mountMatcher.find()) {
-                    String mountName = mountMatcher.group(1);
+                while (itemMatcher.find()) {
+                    String itemId = itemMatcher.group(1);
+                    String item = itemMatcher.group(2);
 
-                    synchronized (MOUNT_LOADER_LOCK) {
-                        Mount mount = mountRepository.findByName(mountName);
+                    // TODO: Make this multithreaded
 
-                        if (mount == null) {
-                            mount = mountRepository.save(Mount.builder()
-                                    .name(mountName)
-                                    .visible(true)
+                    String itemContent = httpClient.get(Constants.ITEM_URL + "/" + itemId)
+                            .replaceAll("\n", "")
+                            .replaceAll("\r", "");
+
+                    if (itemContent.contains("Use to Acquire") && itemContent.contains("<li><a href=\"/lodestone/playguide/db/item/?category2=7&amp;category3=63\" ")) {
+                        Pattern mountPattern = Pattern.compile("Use to Acquire.+?<p>(.+?)</p>");
+                        Matcher mountMatcher = mountPattern.matcher(itemContent);
+
+                        if (mountMatcher.find()) {
+                            String mountName = mountMatcher.group(1);
+                            log.info(item + " -> " + mountName);
+                            Mount mount = mountService.addMount(mountName);
+                            mounts.add(mount);
+
+                            mountItemService.addMountItem(item, mountName);
+                            mountLinkRepository.save(MountLink.builder()
+                                    .mountId(mount.getId())
+                                    .trialId(trial.getId())
                                     .build());
                         }
-
-                        mounts.add(mount);
                     }
                 }
 

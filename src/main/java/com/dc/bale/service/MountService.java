@@ -46,4 +46,17 @@ public class MountService {
             }
         }
     }
+
+    synchronized Mount addMount(String name) {
+        Mount mount = mountRepository.findByName(name);
+
+        if (mount == null) {
+            mount = mountRepository.save(Mount.builder()
+                    .name(name)
+                    .visible(true)
+                    .build());
+        }
+
+        return mount;
+    }
 }
