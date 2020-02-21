@@ -39,6 +39,7 @@ public class LodestoneDataLoader {
     private final PlayerTracker playerTracker;
     private final MountItemService mountItemService;
     private final MountLinkRepository mountLinkRepository;
+    private final ConfigService configService;
 
     @PostConstruct
     private void loadAllTrials() {
@@ -75,7 +76,8 @@ public class LodestoneDataLoader {
                 content = httpClient.get(trialsUrl + "&page=" + x);
             }
 
-            Pattern pattern = Pattern.compile("<a href=\"/lodestone/playguide/db/duty/(.+?)/.+?>(?:(.+? \\(Extreme\\)|(The Minstrel's Ballad: .+?)))</a>");
+            String trialsRegex = configService.getConfig("regex_trials");
+            Pattern pattern = Pattern.compile(trialsRegex);
             Matcher matcher = pattern.matcher(content);
 
             while (matcher.find()) {
@@ -108,7 +110,8 @@ public class LodestoneDataLoader {
             String url = DUTY_URL + "/" + trial.getLodestoneId();
             try {
                 String content = httpClient.get(url);
-                Pattern pattern = Pattern.compile("<li class=\"boss.+?class=\"db_popup\"><strong>(.+?)</strong>", Pattern.DOTALL);
+                String trialBossNameRegex = configService.getConfig("regex_trial_boss_name");
+                Pattern pattern = Pattern.compile(trialBossNameRegex, Pattern.DOTALL);
                 Matcher matcher = pattern.matcher(content);
                 Trial oldValues = trial.toBuilder().build();
                 String boss;
@@ -120,7 +123,8 @@ public class LodestoneDataLoader {
                 }
                 trial.setBoss(boss);
 
-                Pattern itemPattern = Pattern.compile("<a href=\"/lodestone/playguide/db/item/(.+?)/\".+?>(.+?)</a>");
+                String itemRegex = configService.getConfig("regex_trial_item");
+                Pattern itemPattern = Pattern.compile(itemRegex);
                 Matcher itemMatcher = itemPattern.matcher(content);
                 List<Mount> mounts = new ArrayList<>();
 
@@ -135,7 +139,8 @@ public class LodestoneDataLoader {
                             .replaceAll("\r", "");
 
                     if (itemContent.contains("Use to Acquire") && itemContent.contains("<li><a href=\"/lodestone/playguide/db/item/?category2=7&amp;category3=63\" ")) {
-                        Pattern mountPattern = Pattern.compile("Use to Acquire.+?<p>(.+?)</p>");
+                        String useToAcquireRegex = configService.getConfig("regex_trial_use_to_acquire");
+                        Pattern mountPattern = Pattern.compile(useToAcquireRegex);
                         Matcher mountMatcher = mountPattern.matcher(itemContent);
 
                         if (mountMatcher.find()) {
@@ -157,7 +162,8 @@ public class LodestoneDataLoader {
                     trial.setMounts(mounts);
                 }
 
-                Pattern ilvlPattern = Pattern.compile("<li>Avg\\. Item Level: (.+?)</li>");
+                String ilevelRegex = configService.getConfig("regex_trial_ilevel");
+                Pattern ilvlPattern = Pattern.compile(ilevelRegex);
                 Matcher ilvlMatcher = ilvlPattern.matcher(content);
 
                 if (ilvlMatcher.find()) {
@@ -226,7 +232,8 @@ public class LodestoneDataLoader {
                         .replace("\r", "");
             }
 
-            Pattern pattern = Pattern.compile("</span>.+?<a href=\"/lodestone/playguide/db/item/([a-z0-9]+)/(?:\\?patch=latest)?\" class=\"db_popup db-table__txt--detail_link\">(.+?)</a>");
+            String minionsRegex = configService.getConfig("regex_all_minions");
+            Pattern pattern = Pattern.compile(minionsRegex);
             Matcher matcher = pattern.matcher(content);
 
             while (matcher.find()) {

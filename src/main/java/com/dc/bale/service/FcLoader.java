@@ -27,11 +27,11 @@ public class FcLoader {
     private final PlayerRepository playerRepository;
     private final FcRankRepository rankRepository;
     private final MinionService minionService;
-    private final ConfigRepository configRepository;
+    private final ConfigService configService;
 
     void loadPlayerData() {
-        Config freeCompanyUrl = configRepository.findByName("freeCompanyUrl");
-        String content = httpClient.get(BASE_URL + freeCompanyUrl.getValue());
+        String freeCompanyUrl = configService.getConfig("freeCompanyUrl");
+        String content = httpClient.get(BASE_URL + freeCompanyUrl);
 
         Map<String, Player> players = playerRepository.findAll().stream()
                 .collect(Collectors.toMap(Player::getName, player -> player));
@@ -41,7 +41,7 @@ public class FcLoader {
         for (int x = 1; x <= numPages; x++) {
             // First page is already loaded, don't load it again
             if (x > 1) {
-                content = httpClient.get(BASE_URL + freeCompanyUrl.getValue() + "?page=" + x);
+                content = httpClient.get(BASE_URL + freeCompanyUrl + "?page=" + x);
             }
             playerLoaders.addAll(loadMountsAndMinionsForPage(content, players));
         }
@@ -59,7 +59,8 @@ public class FcLoader {
 
     private List<PlayerLoader> loadMountsAndMinionsForPage(String content, Map<String, Player> players) {
         List<PlayerLoader> playerLoaders = new ArrayList<>();
-        Pattern pattern = Pattern.compile("<li class=\"entry\"><a href=\"(.+?)\".+?<div class=\"entry__chara__face\"><img src=\"(.+?)\".+?<p class=\"entry__name\">(.+?)</p>.+?<ul class=\"entry__freecompany__info\"><li><img src=\"(.+?)\".+?<span>(.+?)</span></li>.+?</li>.+?</li>");
+        String playersRegex = configService.getConfig("regex_players");
+        Pattern pattern = Pattern.compile(playersRegex);
         Matcher matcher = pattern.matcher(content);
 
         // Load all the mounts for each player from the lodestone
@@ -121,7 +122,8 @@ public class FcLoader {
     }
 
     int getNumPages(String content) {
-        Pattern pattern = Pattern.compile("<div class=\"parts__total\">([0-9]+) Total</div>");
+        String numFcPagesRegex = configService.getConfig("regex_num_fc_pages");
+        Pattern pattern = Pattern.compile(numFcPagesRegex);
         Matcher matcher = pattern.matcher(content);
 
         if (matcher.find()) {
@@ -143,8 +145,8 @@ public class FcLoader {
     }
 
     String getFCPageContent(int page) {
-        Config freeCompanyUrl = configRepository.findByName("freeCompanyUrl");
-        String url = BASE_URL + freeCompanyUrl.getValue();
+        String freeCompanyUrl = configService.getConfig("freeCompanyUrl");
+        String url = BASE_URL + freeCompanyUrl;
 
         if (page >= 1) {
             url += "?page=" + page;
@@ -173,14 +175,16 @@ public class FcLoader {
 
         private void loadMounts(Player player) {
             String content = httpClient.get(BASE_URL + player.getUrl() + "/mount");
-            Pattern hashPattern = Pattern.compile("<li class=\"mount__list_icon.+?data-tooltip_href=\"/lodestone/character/.+?/mount/tooltip/(.+?)\".+?</li>");
+            String mountHashRegex = configService.getConfig("regex_mount_hash");
+            Pattern hashPattern = Pattern.compile(mountHashRegex);
             Matcher hashMatcher = hashPattern.matcher(content);
 
             while (hashMatcher.find()) {
                 String hash = hashMatcher.group(1);
                 Supplier<String> lookupMountNameFromHash = () -> {
                     String tooltipContent = httpClient.get(BASE_URL + player.getUrl() + "/mount/tooltip/" + hash);
-                    Pattern namePattern = Pattern.compile("<h4 class=\"mount__header__label\">(.+?)</h4>");
+                    String mountNameRegex = configService.getConfig("regex_mount_name");
+                    Pattern namePattern = Pattern.compile(mountNameRegex);
                     Matcher nameMatcher = namePattern.matcher(tooltipContent);
                     if (nameMatcher.find()) {
                         return nameMatcher.group(1);
@@ -195,14 +199,16 @@ public class FcLoader {
 
         private void loadMinions(Player player) {
             String content = httpClient.get(BASE_URL + player.getUrl() + "/minion");
-            Pattern hashPattern = Pattern.compile("<li class=\"minion__list_icon.+?data-tooltip_href=\"/lodestone/character/.+?/minion/tooltip/(.+?)\".+?</li>");
+            String minionHashRegex = configService.getConfig("regex_minion_hash");
+            Pattern hashPattern = Pattern.compile(minionHashRegex);
             Matcher hashMatcher = hashPattern.matcher(content);
 
             while (hashMatcher.find()) {
                 String hash = hashMatcher.group(1);
                 Supplier<String> lookupMinionNameFromHash = () -> {
                     String tooltipContent = httpClient.get(BASE_URL + player.getUrl() + "/minion/tooltip/" + hash);
-                    Pattern namePattern = Pattern.compile("<h4 class=\"minion__header__label\">(.+?)</h4>");
+                    String minionNameRegex = configService.getConfig("regex_minion_name");
+                    Pattern namePattern = Pattern.compile(minionNameRegex);
                     Matcher nameMatcher = namePattern.matcher(tooltipContent);
                     if (nameMatcher.find()) {
                         return nameMatcher.group(1);

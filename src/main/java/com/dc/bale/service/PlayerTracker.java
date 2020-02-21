@@ -30,6 +30,7 @@ public class PlayerTracker {
     private final PlayerService playerService;
     private final FcLoader fcLoader;
     private final TrialService trialService;
+    private final ConfigService configService;
 
     private String lastUpdated = "Never";
 
@@ -121,7 +122,8 @@ public class PlayerTracker {
             if (x > 1) {
                 content = fcLoader.getFCPageContent(x);
             }
-            Pattern pattern = Pattern.compile("<li class=\"entry\"><a href=\"(.+?)\".+?<p class=\"entry__name\">(.+?)</p>.+?<ul class=\"entry__freecompany__info\"><li><img src=\"(.+?)\".+?<span>(.+?)</span></li>.+?</li>.+?</li>");
+            String playerRegex = configService.getConfig("regex_old_players");
+            Pattern pattern = Pattern.compile(playerRegex);
             Matcher matcher = pattern.matcher(content);
 
             // Load all the mounts for each player from the lodestone
@@ -130,15 +132,18 @@ public class PlayerTracker {
                 fcPlayers.add(playerName);
             }
         }
-        List<Player> oldPlayers = dbPlayers.values().stream()
-                .filter(player -> !fcPlayers.contains(player.getName()))
-                .collect(Collectors.toList());
 
-        if (!oldPlayers.isEmpty()) {
-            log.info("FC players: {}", fcPlayers.toString());
+        if(!fcPlayers.isEmpty()) {
+            List<Player> oldPlayers = dbPlayers.values().stream()
+                    .filter(player -> !fcPlayers.contains(player.getName()))
+                    .collect(Collectors.toList());
+
+            if (!oldPlayers.isEmpty()) {
+                log.info("FC players: {}", fcPlayers.toString());
+            }
+
+            playerService.deletePlayers(oldPlayers);
         }
-
-        playerService.deletePlayers(oldPlayers);
     }
 
     public List<AvailableMount> getAvailableMounts() {

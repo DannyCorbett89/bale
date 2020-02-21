@@ -90,7 +90,7 @@ create table config
 (
     id    int not null auto_increment,
     name  varchar(191),
-    value varchar(191),
+    value varchar(250),
     primary key (id),
     unique (name)
 );

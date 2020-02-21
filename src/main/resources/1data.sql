@@ -1,2 +1,14 @@
-insert into config (name, value)
-values ('freeCompanyUrl', '/lodestone/freecompany/9229283011365743624/member/');
+insert into config (name, value) values ('freeCompanyUrl', '/lodestone/freecompany/9229283011365743624/member/');
+insert into config (name, value) values ('regex_old_players', '<li class="entry"><a href="(.+?)".+?<p class="entry__name">(.+?)</p>.+?<ul class="entry__freecompany__info"><li><img src="(.+?)".+?<span>(.+?)</span></li>.+?</li>.+?</li>');
+insert into config (name, value) values ('regex_num_fc_pages', '<div class="parts__total">([0-9]+) Total</div>');
+insert into config (name, value) values ('regex_players', '<li class="entry"><a href="(.+?)".+?<div class="entry__chara__face"><img src="(.+?)".+?<p class="entry__name">(.+?)</p>.+?<ul class="entry__freecompany__info"><li><img src="(.+?)".+?<span>(.+?)</span></li>.+?</li>.+?</li>');
+insert into config (name, value) values ('regex_mount_hash', '<li class="mount__list_icon.+?data-tooltip_href="/lodestone/character/.+?/mount/tooltip/(.+?)".+?</li>');
+insert into config (name, value) values ('regex_mount_name', '<h4 class="mount__header__label">(.+?)</h4>');
+insert into config (name, value) values ('regex_minion_hash', '<li class="minion__list_icon.+?data-tooltip_href="/lodestone/character/.+?/minion/tooltip/(.+?)".+?</li>');
+insert into config (name, value) values ('regex_minion_name', '<h4 class="minion__header__label">(.+?)</h4>');
+insert into config (name, value) values ('regex_trials', '<a href="/lodestone/playguide/db/duty/(.+?)/.+?>(?:(.+? \(Extreme\)|(The Minstrel[.]s Ballad: .+?)))</a>');
+insert into config (name, value) values ('regex_trial_boss_name', '<li class="boss.+?class="db_popup"><strong>(.+?)</strong>');
+insert into config (name, value) values ('regex_trial_item', '<a href="/lodestone/playguide/db/item/(.+?)/".+?>(.+?)</a>');
+insert into config (name, value) values ('regex_trial_use_to_acquire', 'Use to Acquire.+?<p>(.+?)</p>');
+insert into config (name, value) values ('regex_trial_ilevel', '<li>.+?Avg.+? Item Level: (.+?)</li>');
+insert into config (name, value) values ('regex_all_minions', '</span>.+?<a href="/lodestone/playguide/db/item/([a-z0-9]+)/(?:\?patch=latest)?" class="db_popup db-table__txt--detail_link">(.+?)</a>');

@@ -30,8 +30,9 @@ public class PlayerTrackerTest {
     private PlayerService playerService = mock(PlayerService.class);
     private FcLoader fcLoader = mock(FcLoader.class);
     private TrialService trialService = mock(TrialService.class);
+    private ConfigService configService = mock(ConfigService.class);
 
-    private PlayerTracker playerTracker = new PlayerTracker(mountRepository, playerService, fcLoader, trialService);
+    private PlayerTracker playerTracker = new PlayerTracker(mountRepository, playerService, fcLoader, trialService, configService);
 
     @Captor
     private ArgumentCaptor<List<Player>> playersCaptor;
