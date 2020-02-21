@@ -63,27 +63,28 @@ public class PlayerTrackerTest {
     @Test
     public void testCleanOldPlayers_OldPlayersAreRemoved() {
         givenPlayer(SYTH);
-        givenFCPageContent();
+        givenFCPageContent(1);
+        givenOldPlayersRegex();
         whenCleanOldPlayers();
         thenPlayerShouldBeDeleted();
     }
 
     @Test
     public void testCleanOldPlayers_ExistingPlayersAreNotRemoved() {
-        givenNumFCPages(1);
-        givenFCPageContent();
+        givenFCPageContent(1);
         givenPlayer(USSA);
+        givenOldPlayersRegex();
         whenCleanOldPlayers();
         thenPlayerShouldNotBeDeleted();
     }
 
     @Test
     public void testCleanOldPlayers_TwoPagesExistingPlayersAreNotRemoved() {
-        givenNumFCPages(2);
-        givenFCPageContent();
+        givenFCPageContent(2);
         givenSecondFCPageContent();
         givenPlayer(USSA);
         givenPlayer(SYTH);
+        givenOldPlayersRegex();
         whenCleanOldPlayers();
         thenPlayerShouldNotBeDeleted();
     }
@@ -186,8 +187,9 @@ public class PlayerTrackerTest {
         when(mountRepository.findAllByVisible(eq(true))).thenReturn(mounts);
     }
 
-    private void givenFCPageContent() {
+    private void givenFCPageContent(int numPages) {
         when(fcLoader.getFCPageContent()).thenReturn("\t\t\t\t<li class=\"entry\"><a href=\"/lodestone/character/16341245/\" class=\"entry__bg mychara\"><div class=\"entry__flex\"><div class=\"entry__chara__face\"><img src=\"https://img2.finalfantasyxiv.com/f/26b18137662f7b443aafbcf39d8cbd29_c274370774c6bc3483cc8740805f41bcfc0_96x96.jpg?1557009670\" alt=\"\"><i class=\"entry__freecompany__online parts__online_off\"></i></div><div class=\"entry__freecompany__center\"><p class=\"entry__name\">Ussa Xellus</p><p class=\"entry__world\"><i class=\"xiv-lds xiv-lds-home-world js__tooltip\" data-tooltip=\"Home World\"></i>Zodiark&nbsp;(Light)</p><ul class=\"entry__freecompany__info\"><li><img src=\"https://img.finalfantasyxiv.com/lds/h/s/uIrHic2MOYHNS316SWOpAFgMKM.png\" width=\"20\" height=\"20\" alt=\"\"><span>Bismarck</span></li><li><i class=\"list__ic__class\"><img src=\"https://img.finalfantasyxiv.com/lds/h/m/KndG72XtCFwaq1I1iqwcmO_0zc.png\" width=\"20\" height=\"20\" alt=\"\"></i><span>70</span></li><li class=\"js__tooltip\" data-tooltip=\"Immortal Flames / First Flame Lieutenant\"><img src=\"https://img.finalfantasyxiv.com/lds/h/Z/xoUzj9-PpBilPQFcLtcsw0anac.png\" width=\"20\" height=\"20\" alt=\"\"></li></ul></div></div></a></li>");
+        when(fcLoader.getNumPages(anyString())).thenReturn(numPages);
     }
 
     private void givenSecondFCPageContent() {
@@ -196,10 +198,6 @@ public class PlayerTrackerTest {
 
     private void givenFCContentLoadFailure() {
         when(fcLoader.getFCPageContent()).thenReturn(StringUtils.EMPTY);
-    }
-
-    private void givenNumFCPages(int pages) {
-        when(fcLoader.getNumPages(anyString())).thenReturn(pages);
     }
 
     private void givenPlayer(String playerName, String... mountNames) {
@@ -240,6 +238,10 @@ public class PlayerTrackerTest {
         mounts.add(mount3);
 
         when(mountRepository.findAllByVisible(eq(false))).thenReturn(mounts);
+    }
+
+    private void givenOldPlayersRegex() {
+        when(configService.getConfig(anyString())).thenReturn("<li class=\"entry\"><a href=\"(.+?)\".+?<p class=\"entry__name\">(.+?)</p>.+?<ul class=\"entry__freecompany__info\"><li><img src=\"(.+?)\".+?<span>(.+?)</span></li>.+?</li>.+?</li>");
     }
 
     private void whenGetMounts() {
