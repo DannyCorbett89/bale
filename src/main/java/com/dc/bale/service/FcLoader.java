@@ -30,6 +30,7 @@ public class FcLoader {
     private final ConfigService configService;
 
     void loadPlayerData() {
+        log.info("Loading player data...");
         String freeCompanyUrl = configService.getConfig("freeCompanyUrl");
         String content = httpClient.get(BASE_URL + freeCompanyUrl);
 
@@ -59,8 +60,7 @@ public class FcLoader {
 
     private List<PlayerLoader> loadMountsAndMinionsForPage(String content, Map<String, Player> players) {
         List<PlayerLoader> playerLoaders = new ArrayList<>();
-        String playersRegex = configService.getConfig("regex_players");
-        Pattern pattern = Pattern.compile(playersRegex);
+        Pattern pattern = Pattern.compile("<li class=\"entry\"><a href=\"(.+?)\".+?<div class=\"entry__chara__face\"><img src=\"(.+?)\".+?<p class=\"entry__name\">(.+?)</p>.+?<ul class=\"entry__freecompany__info\"><li><img src=\"(.+?)\".+?<span>(.+?)</span></li>.+?</li>.+?</li>");
         Matcher matcher = pattern.matcher(content);
 
         // Load all the mounts for each player from the lodestone
@@ -122,8 +122,7 @@ public class FcLoader {
     }
 
     int getNumPages(String content) {
-        String numFcPagesRegex = configService.getConfig("regex_num_fc_pages");
-        Pattern pattern = Pattern.compile(numFcPagesRegex);
+        Pattern pattern = Pattern.compile("<div class=\"parts__total\">([0-9]+) Total</div>");
         Matcher matcher = pattern.matcher(content);
 
         if (matcher.find()) {
@@ -169,22 +168,18 @@ public class FcLoader {
             loadMinions(player);
 
             playerRepository.save(player);
-
-            log.info("Loaded data for {}", player.getName());
         }
 
         private void loadMounts(Player player) {
             String content = httpClient.get(BASE_URL + player.getUrl() + "/mount");
-            String mountHashRegex = configService.getConfig("regex_mount_hash");
-            Pattern hashPattern = Pattern.compile(mountHashRegex);
+            Pattern hashPattern = Pattern.compile("<li class=\"mount__list_icon.+?data-tooltip_href=\"/lodestone/character/.+?/mount/tooltip/(.+?)\".+?</li>");
             Matcher hashMatcher = hashPattern.matcher(content);
 
             while (hashMatcher.find()) {
                 String hash = hashMatcher.group(1);
                 Supplier<String> lookupMountNameFromHash = () -> {
                     String tooltipContent = httpClient.get(BASE_URL + player.getUrl() + "/mount/tooltip/" + hash);
-                    String mountNameRegex = configService.getConfig("regex_mount_name");
-                    Pattern namePattern = Pattern.compile(mountNameRegex);
+                    Pattern namePattern = Pattern.compile("<h4 class=\"mount__header__label\">(.+?)</h4>");
                     Matcher nameMatcher = namePattern.matcher(tooltipContent);
                     if (nameMatcher.find()) {
                         return nameMatcher.group(1);
@@ -199,16 +194,14 @@ public class FcLoader {
 
         private void loadMinions(Player player) {
             String content = httpClient.get(BASE_URL + player.getUrl() + "/minion");
-            String minionHashRegex = configService.getConfig("regex_minion_hash");
-            Pattern hashPattern = Pattern.compile(minionHashRegex);
+            Pattern hashPattern = Pattern.compile("<li class=\"minion__list_icon.+?data-tooltip_href=\"/lodestone/character/.+?/minion/tooltip/(.+?)\".+?</li>");
             Matcher hashMatcher = hashPattern.matcher(content);
 
             while (hashMatcher.find()) {
                 String hash = hashMatcher.group(1);
                 Supplier<String> lookupMinionNameFromHash = () -> {
                     String tooltipContent = httpClient.get(BASE_URL + player.getUrl() + "/minion/tooltip/" + hash);
-                    String minionNameRegex = configService.getConfig("regex_minion_name");
-                    Pattern namePattern = Pattern.compile(minionNameRegex);
+                    Pattern namePattern = Pattern.compile("<h4 class=\"minion__header__label\">(.+?)</h4>");
                     Matcher nameMatcher = namePattern.matcher(tooltipContent);
                     if (nameMatcher.find()) {
                         return nameMatcher.group(1);

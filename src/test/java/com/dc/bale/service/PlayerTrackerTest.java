@@ -64,7 +64,6 @@ public class PlayerTrackerTest {
     public void testCleanOldPlayers_OldPlayersAreRemoved() {
         givenPlayer(SYTH);
         givenFCPageContent(1);
-        givenOldPlayersRegex();
         whenCleanOldPlayers();
         thenPlayerShouldBeDeleted();
     }
@@ -73,7 +72,6 @@ public class PlayerTrackerTest {
     public void testCleanOldPlayers_ExistingPlayersAreNotRemoved() {
         givenFCPageContent(1);
         givenPlayer(USSA);
-        givenOldPlayersRegex();
         whenCleanOldPlayers();
         thenPlayerShouldNotBeDeleted();
     }
@@ -84,7 +82,6 @@ public class PlayerTrackerTest {
         givenSecondFCPageContent();
         givenPlayer(USSA);
         givenPlayer(SYTH);
-        givenOldPlayersRegex();
         whenCleanOldPlayers();
         thenPlayerShouldNotBeDeleted();
     }
@@ -240,10 +237,6 @@ public class PlayerTrackerTest {
         when(mountRepository.findAllByVisible(eq(false))).thenReturn(mounts);
     }
 
-    private void givenOldPlayersRegex() {
-        when(configService.getConfig(anyString())).thenReturn("<li class=\"entry\"><a href=\"(.+?)\".+?<p class=\"entry__name\">(.+?)</p>.+?<ul class=\"entry__freecompany__info\"><li><img src=\"(.+?)\".+?<span>(.+?)</span></li>.+?</li>.+?</li>");
-    }
-
     private void whenGetMounts() {
         mountResponse = playerTracker.getMounts();
     }
@@ -298,9 +291,7 @@ public class PlayerTrackerTest {
     }
 
     private void thenPlayerShouldNotBeDeleted() {
-        verify(playerService, times(1)).deletePlayers(playersCaptor.capture());
-        List<Player> deletedPlayers = playersCaptor.getValue();
-        assertEquals(0, deletedPlayers.size());
+        verify(playerService, times(0)).deletePlayers(any());
     }
 
     private void thenDeleteShouldNotBeCalled() {

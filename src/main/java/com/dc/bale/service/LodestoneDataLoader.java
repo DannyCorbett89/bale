@@ -63,6 +63,7 @@ public class LodestoneDataLoader {
     }
 
     private void loadTrials(boolean latestPatch) {
+        log.info("Loading trials...");
         String trialsUrl = getFullUrl(TRIALS_URL, latestPatch);
         String content = httpClient.get(trialsUrl);
         List<Trial> trials = trialRepository.findAll();
@@ -76,8 +77,7 @@ public class LodestoneDataLoader {
                 content = httpClient.get(trialsUrl + "&page=" + x);
             }
 
-            String trialsRegex = configService.getConfig("regex_trials");
-            Pattern pattern = Pattern.compile(trialsRegex);
+            Pattern pattern = Pattern.compile("<a href=\"/lodestone/playguide/db/duty/(.+?)/.+?>(?:(.+? \\(Extreme\\)|(The Minstrel's Ballad: .+?)))</a>");
             Matcher matcher = pattern.matcher(content);
 
             while (matcher.find()) {
@@ -95,6 +95,7 @@ public class LodestoneDataLoader {
                 }
             }
         }
+        log.info("Finished loading trials");
     }
 
     public class TrialLoader extends Thread {
@@ -110,8 +111,7 @@ public class LodestoneDataLoader {
             String url = DUTY_URL + "/" + trial.getLodestoneId();
             try {
                 String content = httpClient.get(url);
-                String trialBossNameRegex = configService.getConfig("regex_trial_boss_name");
-                Pattern pattern = Pattern.compile(trialBossNameRegex, Pattern.DOTALL);
+                Pattern pattern = Pattern.compile("<li class=\"boss.+?class=\"db_popup\"><strong>(.+?)</strong>", Pattern.DOTALL);
                 Matcher matcher = pattern.matcher(content);
                 Trial oldValues = trial.toBuilder().build();
                 String boss;
@@ -123,8 +123,7 @@ public class LodestoneDataLoader {
                 }
                 trial.setBoss(boss);
 
-                String itemRegex = configService.getConfig("regex_trial_item");
-                Pattern itemPattern = Pattern.compile(itemRegex);
+                Pattern itemPattern = Pattern.compile("<a href=\"/lodestone/playguide/db/item/(.+?)/\".+?>(.+?)</a>");
                 Matcher itemMatcher = itemPattern.matcher(content);
                 List<Mount> mounts = new ArrayList<>();
 
@@ -139,8 +138,7 @@ public class LodestoneDataLoader {
                             .replaceAll("\r", "");
 
                     if (itemContent.contains("Use to Acquire") && itemContent.contains("<li><a href=\"/lodestone/playguide/db/item/?category2=7&amp;category3=63\" ")) {
-                        String useToAcquireRegex = configService.getConfig("regex_trial_use_to_acquire");
-                        Pattern mountPattern = Pattern.compile(useToAcquireRegex);
+                        Pattern mountPattern = Pattern.compile("Use to Acquire.+?<p>(.+?)</p>");
                         Matcher mountMatcher = mountPattern.matcher(itemContent);
 
                         if (mountMatcher.find()) {
@@ -162,8 +160,7 @@ public class LodestoneDataLoader {
                     trial.setMounts(mounts);
                 }
 
-                String ilevelRegex = configService.getConfig("regex_trial_ilevel");
-                Pattern ilvlPattern = Pattern.compile(ilevelRegex);
+                Pattern ilvlPattern = Pattern.compile("<li>.+?Avg.+? Item Level: (.+?)</li>");
                 Matcher ilvlMatcher = ilvlPattern.matcher(content);
 
                 if (ilvlMatcher.find()) {
@@ -218,6 +215,7 @@ public class LodestoneDataLoader {
 
     private void loadMinions(boolean latestPatch) {
         // TODO: Refactor, extract
+        log.info("Loading minions...");
         String minionsUrl = getFullUrl(MINIONS_URL, latestPatch);
         String content = httpClient.get(minionsUrl);
         Set<String> minionNames = minionRepository.findAll().stream()
@@ -232,8 +230,7 @@ public class LodestoneDataLoader {
                         .replace("\r", "");
             }
 
-            String minionsRegex = configService.getConfig("regex_all_minions");
-            Pattern pattern = Pattern.compile(minionsRegex);
+            Pattern pattern = Pattern.compile("</span>.+?<a href=\"/lodestone/playguide/db/item/([a-z0-9]+)/(?:\\?patch=latest)?\" class=\"db_popup db-table__txt--detail_link\">(.+?)</a>");
             Matcher matcher = pattern.matcher(content);
 
             while (matcher.find()) {
@@ -242,13 +239,13 @@ public class LodestoneDataLoader {
                         .replace("<i>", "")
                         .replace("</i>", "");
                 if (!minionNames.contains(name)) {
-                    Minion minion = minionRepository.save(Minion.builder()
+                    minionRepository.save(Minion.builder()
                             .name(name)
                             .lodestoneId(lodestoneId)
                             .build());
-                    log.info("Loaded " + minion.getName());
                 }
             }
         }
+        log.info("Finished loading minions");
     }
 }

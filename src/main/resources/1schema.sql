@@ -1,4 +1,13 @@
 drop table if exists trial;
+drop table if exists mount;
+drop table if exists player;
+drop table if exists fc_rank;
+drop table if exists mount_link;
+drop table if exists minion;
+drop table if exists minion_link;
+drop table if exists mount_item;
+drop table if exists config;
+
 create table trial
 (
     id           int           not null auto_increment,
@@ -11,7 +20,6 @@ create table trial
     unique (name)
 );
 
-drop table if exists mount;
 create table mount
 (
     id      int  not null auto_increment,
@@ -22,7 +30,6 @@ create table mount
     unique (name)
 );
 
-drop table if exists fc_rank;
 create table fc_rank
 (
     id      int          not null auto_increment,
@@ -32,7 +39,6 @@ create table fc_rank
     primary key (id)
 );
 
-drop table if exists player;
 create table player
 (
     id      int          not null auto_increment,
@@ -46,7 +52,6 @@ create table player
     unique (name)
 );
 
-drop table if exists mount_link;
 create table mount_link
 (
     id        int not null auto_increment,
@@ -56,7 +61,6 @@ create table mount_link
     primary key (id)
 );
 
-drop table if exists minion;
 create table minion
 (
     id           int not null auto_increment,
@@ -66,7 +70,6 @@ create table minion
     primary key (id)
 );
 
-drop table if exists minion_link;
 create table minion_link
 (
     id        int not null auto_increment,
@@ -75,7 +78,6 @@ create table minion_link
     primary key (id)
 );
 
-drop table if exists mount_item;
 create table mount_item
 (
     id         int not null auto_increment,
@@ -85,7 +87,6 @@ create table mount_item
     unique (item_name)
 );
 
-drop table if exists config;
 create table config
 (
     id    int not null auto_increment,

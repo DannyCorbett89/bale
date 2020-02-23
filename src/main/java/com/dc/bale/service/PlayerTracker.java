@@ -122,8 +122,7 @@ public class PlayerTracker {
             if (x > 1) {
                 content = fcLoader.getFCPageContent(x);
             }
-            String playerRegex = configService.getConfig("regex_old_players");
-            Pattern pattern = Pattern.compile(playerRegex);
+            Pattern pattern = Pattern.compile("<li class=\"entry\"><a href=\"(.+?)\".+?<p class=\"entry__name\">(.+?)</p>.+?<ul class=\"entry__freecompany__info\"><li><img src=\"(.+?)\".+?<span>(.+?)</span></li>.+?</li>.+?</li>");
             Matcher matcher = pattern.matcher(content);
 
             // Load all the mounts for each player from the lodestone
@@ -133,16 +132,17 @@ public class PlayerTracker {
             }
         }
 
-        if(!fcPlayers.isEmpty()) {
+        if (fcPlayers.isEmpty()) {
+            log.info("No FC members detected");
+        } else {
             List<Player> oldPlayers = dbPlayers.values().stream()
                     .filter(player -> !fcPlayers.contains(player.getName()))
                     .collect(Collectors.toList());
 
             if (!oldPlayers.isEmpty()) {
                 log.info("FC players: {}", fcPlayers.toString());
+                playerService.deletePlayers(oldPlayers);
             }
-
-            playerService.deletePlayers(oldPlayers);
         }
     }
 
