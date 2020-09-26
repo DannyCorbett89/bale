@@ -46,8 +46,14 @@ public class DomainNameController {
     @PostConstruct
     @Scheduled(fixedRate = 3600000)
     public void hasIPAddressChanged() throws IOException {
-        String domain = "bahamutslegion.com";
-        String url = "https://api.godaddy.com/v1/domains/" + domain + "/records/A/@";
+        Config domain = configRepository.findByName("domainName");
+
+        if(domain == null) {
+            log.info("domainName has not been set, skipping IP check");
+            return;
+        }
+
+        String url = "https://api.godaddy.com/v1/domains/" + domain.getValue() + "/records/A/@";
         Config key = configRepository.findByName("domainKey");
         Config secret = configRepository.findByName("domainSecret");
 
