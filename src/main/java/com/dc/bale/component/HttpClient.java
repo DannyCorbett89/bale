@@ -1,5 +1,7 @@
 package com.dc.bale.component;
 
+import com.dc.bale.exception.HttpException;
+import okhttp3.*;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -25,14 +27,16 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+import java.util.Base64;
 
 @Component
 public class HttpClient {
     private static final String EMPTY = "";
 
     private CloseableHttpClient client;
+    private final JsonMapper jsonMapper;
 
-    public HttpClient() {
+    public HttpClient(JsonMapper jsonMapper) {
         SSLConnectionSocketFactory factory;
         try {
             SSLContext context = SSLContext.getInstance("TLS");
@@ -55,6 +59,7 @@ public class HttpClient {
                 .setSSLSocketFactory(factory)
                 .setConnectionManager(manager)
                 .build();
+        this.jsonMapper = jsonMapper;
     }
 
     public String get(String url) {
@@ -77,6 +82,36 @@ public class HttpClient {
         put.addHeader("Authorization", authorization);
         put.setEntity(new StringEntity(content, Charset.defaultCharset()));
         execute(put);
+    }
+
+    public <T> T multipart(String url, String username, String password, String formData, Class<T> returnType) {
+        OkHttpClient client = new OkHttpClient();
+        MediaType mediaType = MediaType.parse("multipart/form-data; boundary=---011000010111000001101001");
+        RequestBody requestBody = RequestBody.create("-----011000010111000001101001\r\nContent-Disposition: form-data; " + formData + "\r\n-----011000010111000001101001--\r\n", mediaType);
+        Request request = new Request.Builder()
+                .url(url)
+                .post(requestBody)
+                .addHeader("Content-Type", "multipart/form-data")
+                .addHeader("Authorization", getBasicAuth(username, password))
+                .addHeader("content-type", "multipart/form-data; boundary=---011000010111000001101001")
+                .build();
+
+        try {
+            Response response = client.newCall(request).execute();
+            ResponseBody responseBody = response.body();
+            if (responseBody != null) {
+                return jsonMapper.toObject(responseBody.string(), returnType);
+            } else {
+                return null;
+            }
+        } catch (IOException e) {
+            throw new HttpException(e);
+        }
+    }
+
+    private String getBasicAuth(String username, String password) {
+        String rawAuth = username + ":" + password;
+        return "Basic " + Base64.getEncoder().encodeToString(rawAuth.getBytes());
     }
 
     private String execute(HttpRequestBase request) {
