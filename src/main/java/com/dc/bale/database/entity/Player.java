@@ -68,6 +68,6 @@ public class Player {
     }
 
     public long getNumVisibleMounts() {
-        return mounts.stream().filter(Mount::isVisible).count();
+        return mounts == null ? 0 : mounts.stream().filter(Mount::isVisible).count();
     }
 }

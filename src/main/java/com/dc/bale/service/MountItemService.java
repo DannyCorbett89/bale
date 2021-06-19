@@ -4,12 +4,11 @@ import com.dc.bale.database.dao.MountItemRepository;
 import com.dc.bale.database.entity.MountItem;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor(onConstructor = @__(@Autowired))
+@RequiredArgsConstructor
 public class MountItemService {
     private final MountItemRepository mountItemRepository;
 

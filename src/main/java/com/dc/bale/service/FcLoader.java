@@ -1,13 +1,14 @@
 package com.dc.bale.service;
 
 import com.dc.bale.component.HttpClient;
-import com.dc.bale.database.dao.ConfigRepository;
 import com.dc.bale.database.dao.FcRankRepository;
 import com.dc.bale.database.dao.PlayerRepository;
-import com.dc.bale.database.entity.*;
+import com.dc.bale.database.entity.FcRank;
+import com.dc.bale.database.entity.Minion;
+import com.dc.bale.database.entity.Mount;
+import com.dc.bale.database.entity.Player;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -20,7 +21,7 @@ import static com.dc.bale.Constants.BASE_URL;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor(onConstructor = @__(@Autowired))
+@RequiredArgsConstructor
 public class FcLoader {
     private final HttpClient httpClient;
     private final MountService mountService;

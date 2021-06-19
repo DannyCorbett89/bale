@@ -7,7 +7,6 @@ import com.dc.bale.database.entity.MountLink;
 import com.dc.bale.database.entity.Trial;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -15,7 +14,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor(onConstructor = @__(@Autowired))
+@RequiredArgsConstructor
 public class TrialService {
     private final TrialRepository trialRepository;
     private final MountLinkRepository mountLinkRepository;

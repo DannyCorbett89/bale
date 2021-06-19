@@ -5,7 +5,6 @@ import com.dc.bale.model.OAuthToken;
 import com.dc.bale.model.TokenRS;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -13,7 +12,7 @@ import java.time.temporal.ChronoUnit;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor(onConstructor = @__(@Autowired))
+@RequiredArgsConstructor
 public class OAuthService {
     private static final String TOKEN_URL = "https://www.fflogs.com/oauth/token";
 

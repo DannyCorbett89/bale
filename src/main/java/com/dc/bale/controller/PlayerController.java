@@ -1,15 +1,12 @@
 package com.dc.bale.controller;
 
 import com.dc.bale.database.dao.PlayerRepository;
-import com.dc.bale.database.entity.FcRank;
 import com.dc.bale.database.entity.Player;
 import com.dc.bale.exception.PlayerException;
 import com.dc.bale.service.PlayerService;
-import com.dc.bale.service.RankService;
 import com.google.common.base.Strings;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -25,7 +22,7 @@ import static com.dc.bale.Constants.SUCCESS;
 @Slf4j
 @RequestMapping("/players")
 @RestController
-@RequiredArgsConstructor(onConstructor = @__(@Autowired))
+@RequiredArgsConstructor
 public class PlayerController {
     private final PlayerService playerService;
     private final PlayerRepository playerRepository;

@@ -12,7 +12,6 @@ import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.entity.ContentType;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -29,7 +28,7 @@ import java.util.List;
 @Slf4j
 @RequestMapping("/domain")
 @RestController
-@RequiredArgsConstructor(onConstructor = @__(@Autowired))
+@RequiredArgsConstructor
 public class DomainNameController {
     @NonNull
     private HttpClient httpClient;
@@ -48,7 +47,7 @@ public class DomainNameController {
     public void hasIPAddressChanged() throws IOException {
         Config domain = configRepository.findByName("domainName");
 
-        if(domain == null) {
+        if (domain == null) {
             log.info("domainName has not been set, skipping IP check");
             return;
         }
