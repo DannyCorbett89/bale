@@ -30,7 +30,7 @@ public class MountController {
     public ResponseEntity<Response> listMounts() {
         Response response = Response.builder()
                 .lastUpdated(playerTracker.getLastUpdated())
-                .columns(playerTracker.getColumns(100, "Mount Name"))
+                .columns(playerTracker.getColumns(200, "Mount Name"))
                 .players(playerTracker.getMounts())
                 .build();
 

@@ -6,7 +6,6 @@ import com.dc.bale.database.entity.Player;
 import com.dc.bale.exception.MountException;
 import com.dc.bale.model.AvailableMount;
 import com.dc.bale.model.MountRS;
-import com.google.common.collect.ImmutableMap;
 import org.apache.commons.lang3.StringUtils;
 import org.junit.Before;
 import org.junit.Test;
@@ -29,10 +28,9 @@ public class PlayerTrackerTest {
     private MountRepository mountRepository = mock(MountRepository.class);
     private PlayerService playerService = mock(PlayerService.class);
     private FcLoader fcLoader = mock(FcLoader.class);
-    private TrialService trialService = mock(TrialService.class);
-    private ConfigService configService = mock(ConfigService.class);
+    private InstanceService instanceService = mock(InstanceService.class);
 
-    private PlayerTracker playerTracker = new PlayerTracker(mountRepository, playerService, fcLoader, trialService, configService);
+    private PlayerTracker playerTracker = new PlayerTracker(mountRepository, playerService, fcLoader, instanceService);
 
     @Captor
     private ArgumentCaptor<List<Player>> playersCaptor;
@@ -52,10 +50,8 @@ public class PlayerTrackerTest {
     @Test
     public void testGetMounts_MountExists() {
         givenTotalMounts();
-        givenInstanceName();
         givenPlayer(USSA, "m2");
         givenPlayer(SYTH, "m1", "m2");
-        givenILevels();
         whenGetMounts();
         thenMountShouldExist();
     }
@@ -152,19 +148,6 @@ public class PlayerTrackerTest {
 
     private void givenFindMountById() {
         when(mountRepository.findOne(anyLong())).thenReturn(mount);
-    }
-
-    private void givenILevels() {
-        Map<Long, Long> iLevels = ImmutableMap.<Long, Long>builder()
-                .put(1L, 200L)
-                .put(2L, 300L)
-                .put(3L, 100L)
-                .build();
-        when(trialService.getMountItemLevels()).thenReturn(iLevels);
-    }
-
-    private void givenInstanceName() {
-        when(trialService.getInstance(any(Mount.class))).thenReturn("b1", "b2", "b3");
     }
 
     private void givenTotalMounts() {
@@ -276,7 +259,7 @@ public class PlayerTrackerTest {
         MountRS resultMount = mountResponse.get(1);
         assertNotNull(resultMount);
         assertEquals(3L, resultMount.getId());
-        assertEquals("b2", resultMount.getName());
+        assertEquals("m3", resultMount.getName());
 
         Map<String, String> players = resultMount.getPlayers();
         assertEquals(2, players.size());

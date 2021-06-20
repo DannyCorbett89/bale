@@ -1,6 +1,7 @@
 package com.dc.bale.service;
 
 import com.dc.bale.database.dao.MountRepository;
+import com.dc.bale.database.entity.Instance;
 import com.dc.bale.database.entity.Mount;
 import com.dc.bale.database.entity.Player;
 import com.dc.bale.exception.MountException;
@@ -28,8 +29,7 @@ public class PlayerTracker {
     private final MountRepository mountRepository;
     private final PlayerService playerService;
     private final FcLoader fcLoader;
-    private final TrialService trialService;
-    private final ConfigService configService;
+    private final InstanceService instanceService;
 
     private String lastUpdated = "Never";
 
@@ -40,14 +40,14 @@ public class PlayerTracker {
     public List<MountRS> getMounts() {
         List<Player> visiblePlayers = playerService.getVisiblePlayers();
         List<Mount> totalMounts = mountRepository.findAllByVisible(true);
-        Map<Long, Long> ilevels = trialService.getMountItemLevels();
+        Map<Long, Instance> instances = instanceService.getInstances(totalMounts);
 
         return totalMounts.stream()
                 .filter(mount -> anyPlayerNeedsMount(mount, visiblePlayers))
-                .map(mount -> getPlayersNeedingMount(visiblePlayers, mount))
+                .map(mount -> getPlayersNeedingMount(visiblePlayers, mount, instances))
                 .sorted((mount1, mount2) ->
-                        Long.compare(ilevels.getOrDefault(mount2.getId(), 0L),
-                                ilevels.getOrDefault(mount1.getId(), 0L)))
+                        Long.compare(instances.getOrDefault(mount2.getId(), new Instance()).getId(),
+                                instances.getOrDefault(mount1.getId(), new Instance()).getId()))
                 .collect(Collectors.toList());
     }
 
@@ -55,14 +55,24 @@ public class PlayerTracker {
         return players.stream().anyMatch(player -> !player.hasMount(mount.getName()));
     }
 
-    private MountRS getPlayersNeedingMount(List<Player> players, Mount mount) {
+    private MountRS getPlayersNeedingMount(List<Player> players, Mount mount, Map<Long, Instance> instances) {
         return MountRS.builder()
                 .id(mount.getId())
-                .name(trialService.getInstance(mount))
+                .name(getName(mount, instances))
                 .players(players.stream()
                         .filter(player -> playerDoesNotHaveMount(mount, player))
                         .collect(Collectors.toMap(player -> "player-" + player.getId(), player -> "X")))
                 .build();
+    }
+
+    private String getName(Mount mount, Map<Long, Instance> instances) {
+        Instance instance = instances.get(mount.getId());
+
+        if (instance == null || mount.getName().equalsIgnoreCase("Nightmare")) {
+            return mount.getName();
+        }
+
+        return instance.getName();
     }
 
     private boolean playerDoesNotHaveMount(Mount mount, Player player) {

@@ -1,4 +1,3 @@
-drop table if exists trial;
 drop table if exists mount;
 drop table if exists player;
 drop table if exists fc_rank;
@@ -8,17 +7,14 @@ drop table if exists minion_link;
 drop table if exists mount_item;
 drop table if exists config;
 
-create table trial
-(
-    id           int           not null auto_increment,
-    name         varchar(191),
-    boss         varchar(191),
-    lodestone_id varchar(191),
-    item_level   int default 0 not null,
-    loaded       bool          not null,
-    primary key (id),
-    unique (name)
-);
+create table instance
+  (
+      id      int  not null,
+      type    varchar(191),
+      name    varchar(191),
+      primary key (id),
+      unique (name, type)
+  );
 
 create table mount
 (
@@ -28,6 +24,14 @@ create table mount
     hash    varchar(191),
     primary key (id),
     unique (name)
+);
+
+create table mount_source_link
+(
+    id        int not null auto_increment,
+    mount_id  int not null default 0,
+    instance_id  int not null default 0,
+    primary key (id)
 );
 
 create table fc_rank
@@ -57,7 +61,6 @@ create table mount_link
     id        int not null auto_increment,
     mount_id  int not null default 0,
     player_id int not null default 0,
-    trial_id  int not null default 0,
     primary key (id)
 );
 
