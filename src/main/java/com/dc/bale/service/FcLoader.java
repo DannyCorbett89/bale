@@ -32,7 +32,6 @@ public class FcLoader {
     private final MinionService minionService;
     private final ConfigService configService;
 
-    // TODO: Refactor to deduplicate
     void loadPlayerMounts() {
         loadPlayer("mounts", MountLoader::new);
     }
