@@ -42,8 +42,11 @@ public class Player {
         return "player-" + id;
     }
 
-    public void clear() {
+    public void clearMounts() {
         mounts.clear();
+    }
+
+    public void clearMinions() {
         minions.clear();
     }
 

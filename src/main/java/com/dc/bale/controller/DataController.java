@@ -22,6 +22,7 @@ public class DataController {
     @GetMapping(value = "refresh", produces = {MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<Map<String, String>> refresh() {
         playerTracker.loadMounts();
+        playerTracker.loadMinions();
 
         String lastUpdated = playerTracker.getLastUpdated();
         Map<String, String> response = ImmutableMap.of("lastUpdated", lastUpdated);

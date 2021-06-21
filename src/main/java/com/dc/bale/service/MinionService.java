@@ -22,6 +22,16 @@ public class MinionService {
     private final MinionRepository minionRepository;
     private final PlayerRepository playerRepository;
 
+    public synchronized void addMinion(String name) {
+        Minion minion = minionRepository.findByName(name);
+
+        if (minion == null) {
+            minionRepository.save(Minion.builder()
+                    .name(name)
+                    .build());
+        }
+    }
+
     public List<MinionRS> getMinions() {
         List<Player> visiblePlayers = playerRepository.findByVisibleTrue();
         List<Minion> totalMinions = minionRepository.findAll();
@@ -53,6 +63,14 @@ public class MinionService {
     }
 
     synchronized Optional<Minion> getAndUpdateMinionForHash(Player player, String hash, Supplier<String> lookupMinionNameFromHash) {
+        // TODO: Maybe we do need to load these from lodestone. Have to load it anyway to see if the player has it
+        // TODO: This is putting too much strain on the service, calling lodestone so often
+        // TODO: One player owning a minion needs to mean there is no http call for the next player for that minion
+        // TODO: Maybe leave this as-is
+
+        // TODO: Call ffxivcollect first to load all minions
+        // TODO: Use this code to fill in the hash for each minion
+        // TODO: Next call to the minion will have the hash, so no http call needed
         Minion minion = minionRepository.findByHash(hash);
         if (minion != null) {
             return Optional.of(minion);
@@ -64,14 +82,13 @@ public class MinionService {
 
                 if (minionByName != null) {
                     minionByName.setHash(hash);
-                    minionRepository.save(minionByName);
                 } else {
                     minionByName = Minion.builder()
                             .name(name)
                             .hash(hash)
                             .build();
-                    minionRepository.save(minionByName);
                 }
+                minionRepository.save(minionByName);
 
                 return Optional.of(minionByName);
             } else {

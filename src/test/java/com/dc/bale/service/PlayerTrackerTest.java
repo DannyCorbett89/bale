@@ -251,7 +251,7 @@ public class PlayerTrackerTest {
     }
 
     private void thenPlayerDataShouldBeLoaded() {
-        verify(fcLoader, times(1)).loadPlayerData();
+        verify(fcLoader, times(1)).loadPlayerMounts();
     }
 
     private void thenMountShouldExist() {

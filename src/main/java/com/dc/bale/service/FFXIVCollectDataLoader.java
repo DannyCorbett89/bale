@@ -1,6 +1,7 @@
 package com.dc.bale.service;
 
 import com.dc.bale.database.entity.Mount;
+import com.dc.bale.model.ffxivcollect.MinionsRS;
 import com.dc.bale.model.ffxivcollect.MountsRS;
 import com.dc.bale.util.SourceType;
 import lombok.RequiredArgsConstructor;
@@ -16,29 +17,43 @@ import javax.annotation.PostConstruct;
 public class FFXIVCollectDataLoader {
     private final FFXIVCollectAPI ffxivCollectAPI;
     private final MountService mountService;
+    private final MinionService minionService;
     private final InstanceService instanceService;
     private final PlayerTracker playerTracker;
 
     @PostConstruct
     @Scheduled(cron = "0 10 * * * *")
-    private void load() {
+    private void loadMounts() {
+        log.info("Loading mounts...");
         loadTrials();
         loadRaids();
+        log.info("Finished loading mounts");
         playerTracker.loadMounts();
     }
 
+    @PostConstruct
+    @Scheduled(cron = "0 10 * * * *")
+    private void loadMinions() {
+        log.info("Loading minions...");
+        MinionsRS minions = ffxivCollectAPI.getMinions();
+        minions.getResults()
+                .forEach(ffxivCollectMinion -> minionService.addMinion(ffxivCollectMinion.getName()));
+        log.info("Finished loading minions");
+        playerTracker.loadMinions();
+    }
+
     private void loadTrials() {
-        MountsRS response = ffxivCollectAPI.getMounts(SourceType.TRIALS);
-        storeMounts(response);
+        MountsRS mounts = ffxivCollectAPI.getMounts(SourceType.TRIALS);
+        storeMounts(mounts);
     }
 
     private void loadRaids() {
-        MountsRS response = ffxivCollectAPI.getMounts(SourceType.RAIDS);
-        storeMounts(response);
+        MountsRS mounts = ffxivCollectAPI.getMounts(SourceType.RAIDS);
+        storeMounts(mounts);
     }
 
-    private void storeMounts(MountsRS response) {
-        response.getResults()
+    private void storeMounts(MountsRS mounts) {
+        mounts.getResults()
                 .forEach(ffxivCollectMount -> {
                     Mount mount = mountService.addMount(ffxivCollectMount.getName());
                     ffxivCollectMount.getSources()

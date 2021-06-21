@@ -105,8 +105,20 @@ public class PlayerTracker {
     }
 
     @Scheduled(cron = "0 0 * * * *")
+    public void loadData() {
+        loadMounts();
+        loadMinions();
+    }
+
     public void loadMounts() {
-        fcLoader.loadPlayerData();
+        fcLoader.loadPlayerMounts();
+
+        SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm");
+        lastUpdated = sdf.format(new Date());
+    }
+
+    public void loadMinions() {
+        fcLoader.loadPlayerMinions();
 
         SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm");
         lastUpdated = sdf.format(new Date());

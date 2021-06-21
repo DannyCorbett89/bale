@@ -10,8 +10,10 @@ import com.dc.bale.database.entity.Player;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.web.util.HtmlUtils;
 
 import java.util.*;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -30,8 +32,17 @@ public class FcLoader {
     private final MinionService minionService;
     private final ConfigService configService;
 
-    void loadPlayerData() {
-        log.info("Loading player data...");
+    // TODO: Refactor to deduplicate
+    void loadPlayerMounts() {
+        loadPlayer("mounts", MountLoader::new);
+    }
+
+    void loadPlayerMinions() {
+        loadPlayer("minions", MinionLoader::new);
+    }
+
+    void loadPlayer(String type, Function<Player, PlayerLoader> getLoader) {
+        log.info("Loading player {}...", type);
         String freeCompanyUrl = configService.getConfig("freeCompanyUrl");
         String content = httpClient.get(BASE_URL + freeCompanyUrl);
 
@@ -45,7 +56,7 @@ public class FcLoader {
             if (x > 1) {
                 content = httpClient.get(BASE_URL + freeCompanyUrl + "?page=" + x);
             }
-            playerLoaders.addAll(loadMountsAndMinionsForPage(content, players));
+            playerLoaders.addAll(loadFromPlayerPage(content, players, getLoader));
         }
 
         playerLoaders.forEach(playerLoader -> {
@@ -56,10 +67,10 @@ public class FcLoader {
             }
         });
 
-        log.info("Finished loading player data");
+        log.info("Finished loading player {}", type);
     }
 
-    private List<PlayerLoader> loadMountsAndMinionsForPage(String content, Map<String, Player> players) {
+    private List<PlayerLoader> loadFromPlayerPage(String content, Map<String, Player> players, Function<Player, PlayerLoader> getLoader) {
         List<PlayerLoader> playerLoaders = new ArrayList<>();
         Pattern pattern = Pattern.compile("<li class=\"entry\"><a href=\"(.+?)\".+?<div class=\"entry__chara__face\"><img src=\"(.+?)\".+?<p class=\"entry__name\">(.+?)</p>.+?<ul class=\"entry__freecompany__info\"><li><img src=\"(.+?)\".+?<span>(.+?)</span></li>.+?</li>.+?</li>");
         Matcher matcher = pattern.matcher(content);
@@ -74,7 +85,7 @@ public class FcLoader {
             FcRank rank = loadRank(rankIcon, rankName);
             Player player = loadPlayer(players, playerName, playerUrl, rank, playerIcon);
 
-            PlayerLoader playerLoader = new PlayerLoader(player);
+            PlayerLoader playerLoader = getLoader.apply(player);
             playerLoader.start();
             playerLoaders.add(playerLoader);
         }
@@ -155,23 +166,31 @@ public class FcLoader {
         return httpClient.get(url);
     }
 
-    public class PlayerLoader extends Thread {
+    public abstract class PlayerLoader extends Thread {
         private Player player;
 
         PlayerLoader(Player player) {
             this.player = player;
         }
 
+        protected abstract void load(Player player);
+
         @Override
         public void run() {
-            player.clear();
-            loadMounts(player);
-            loadMinions(player);
+            load(player);
 
             playerRepository.save(player);
         }
+    }
 
-        private void loadMounts(Player player) {
+    public class MountLoader extends PlayerLoader {
+        MountLoader(Player player) {
+            super(player);
+        }
+
+        @Override
+        protected void load(Player player) {
+            player.clearMounts();
             String content = httpClient.get(BASE_URL + player.getUrl() + "/mount");
             Pattern hashPattern = Pattern.compile("<li class=\"mount__list_icon.+?data-tooltip_href=\"/lodestone/character/.+?/mount/tooltip/(.+?)\".+?</li>");
             Matcher hashMatcher = hashPattern.matcher(content);
@@ -192,8 +211,16 @@ public class FcLoader {
                 mount.ifPresent(player::addMount);
             }
         }
+    }
 
-        private void loadMinions(Player player) {
+    public class MinionLoader extends PlayerLoader {
+        MinionLoader(Player player) {
+            super(player);
+        }
+
+        @Override
+        protected void load(Player player) {
+            player.clearMinions();
             String content = httpClient.get(BASE_URL + player.getUrl() + "/minion");
             Pattern hashPattern = Pattern.compile("<li class=\"minion__list_icon.+?data-tooltip_href=\"/lodestone/character/.+?/minion/tooltip/(.+?)\".+?</li>");
             Matcher hashMatcher = hashPattern.matcher(content);
@@ -205,7 +232,8 @@ public class FcLoader {
                     Pattern namePattern = Pattern.compile("<h4 class=\"minion__header__label\">(.+?)</h4>");
                     Matcher nameMatcher = namePattern.matcher(tooltipContent);
                     if (nameMatcher.find()) {
-                        return nameMatcher.group(1);
+                        String name = nameMatcher.group(1);
+                        return HtmlUtils.htmlUnescape(name);
                     } else {
                         return null;
                     }
