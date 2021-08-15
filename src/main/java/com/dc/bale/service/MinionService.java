@@ -33,7 +33,7 @@ public class MinionService {
     }
 
     public List<MinionRS> getMinions() {
-        List<Player> visiblePlayers = playerRepository.findByVisibleTrue();
+        List<Player> visiblePlayers = playerRepository.findByMinionsVisibleTrue();
         List<Minion> totalMinions = minionRepository.findAll();
         return totalMinions.stream()
                 .filter(minion -> anyPlayerNeedsMinion(minion, visiblePlayers))

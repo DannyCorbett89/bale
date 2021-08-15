@@ -38,7 +38,7 @@ public class PlayerTracker {
     }
 
     public List<MountRS> getMounts() {
-        List<Player> visiblePlayers = playerService.getVisiblePlayers();
+        List<Player> visiblePlayers = playerService.getPlayersVisibleForMounts();
         List<Mount> totalMounts = mountRepository.findAllByVisible(true);
         Map<Long, Instance> instances = instanceService.getInstances(totalMounts);
 
@@ -177,8 +177,17 @@ public class PlayerTracker {
                 .collect(Collectors.toList());
     }
 
-    public List<Column> getColumns(int firstColumnWidth, String firstColumnName) {
-        List<Player> visiblePlayers = playerService.getVisiblePlayers();
+    public List<Column> getMountColumns(int firstColumnWidth) {
+        List<Player> visiblePlayers = playerService.getPlayersVisibleForMounts();
+        return getColumns(firstColumnWidth, "Mount Name", visiblePlayers);
+    }
+
+    public List<Column> getMinionColumns(int firstColumnWidth) {
+        List<Player> visiblePlayers = playerService.getPlayersVisibleForMinions();
+        return getColumns(firstColumnWidth, "Minion Name", visiblePlayers);
+    }
+
+    private List<Column> getColumns(int firstColumnWidth, String firstColumnName, List<Player> visiblePlayers) {
         Map<String, Long> numMounts = visiblePlayers.stream().collect(Collectors.toMap(Player::getColumnKey, Player::getNumVisibleMounts));
         List<Column> columns = new ArrayList<>();
         columns.add(Column.builder()

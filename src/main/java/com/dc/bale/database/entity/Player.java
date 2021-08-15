@@ -19,7 +19,8 @@ public class Player {
     @GeneratedValue(strategy = GenerationType.AUTO)
     private long id;
     private String name;
-    private boolean visible;
+    private boolean mountsVisible;
+    private boolean minionsVisible;
     private String url;
     private String icon;
 

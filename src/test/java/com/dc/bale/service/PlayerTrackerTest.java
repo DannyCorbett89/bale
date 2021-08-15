@@ -44,7 +44,7 @@ public class PlayerTrackerTest {
     @Before
     public void setup() {
         when(playerService.getPlayerMap()).thenReturn(playerMap);
-        when(playerService.getVisiblePlayers()).thenReturn(visiblePlayers);
+        when(playerService.getPlayersVisibleForMounts()).thenReturn(visiblePlayers);
     }
 
     @Test

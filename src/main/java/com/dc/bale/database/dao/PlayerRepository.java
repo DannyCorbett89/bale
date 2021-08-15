@@ -8,9 +8,13 @@ import java.util.List;
 public interface PlayerRepository extends JpaRepository<Player, Long> {
     Player findByName(String name);
 
-    List<Player> findByVisibleTrue();
+    List<Player> findByMountsVisibleTrue();
 
-    List<Player> findByVisibleFalseOrderByName();
+    List<Player> findByMinionsVisibleTrue();
+
+    List<Player> findByMountsVisibleFalseOrderByName();
+
+    List<Player> findByMinionsVisibleFalseOrderByName();
 
     List<Player> findByIdIsIn(List<Long> ids);
 }
