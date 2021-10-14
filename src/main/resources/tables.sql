@@ -47,8 +47,8 @@ create table player
 (
     id      int          not null auto_increment,
     name    varchar(191) not null,
-    mount_visible bool         not null,
-    minion_visible bool         not null,
+    mounts_visible bool         not null,
+    minions_visible bool         not null,
     url     varchar(191) not null,
     rank_id int,
     icon    varchar(191) not null,
