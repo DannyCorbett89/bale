@@ -179,16 +179,17 @@ public class PlayerTracker {
 
     public List<Column> getMountColumns(int firstColumnWidth) {
         List<Player> visiblePlayers = playerService.getPlayersVisibleForMounts();
-        return getColumns(firstColumnWidth, "Mount Name", visiblePlayers);
+        Map<String, Long> numMounts = visiblePlayers.stream().collect(Collectors.toMap(Player::getColumnKey, Player::getNumVisibleMounts));
+        return getColumns(firstColumnWidth, "Mount Name", visiblePlayers, numMounts);
     }
 
     public List<Column> getMinionColumns(int firstColumnWidth) {
         List<Player> visiblePlayers = playerService.getPlayersVisibleForMinions();
-        return getColumns(firstColumnWidth, "Minion Name", visiblePlayers);
+        Map<String, Long> numMinions = visiblePlayers.stream().collect(Collectors.toMap(Player::getColumnKey, Player::getNumMinions));
+        return getColumns(firstColumnWidth, "Minion Name", visiblePlayers, numMinions);
     }
 
-    private List<Column> getColumns(int firstColumnWidth, String firstColumnName, List<Player> visiblePlayers) {
-        Map<String, Long> numMounts = visiblePlayers.stream().collect(Collectors.toMap(Player::getColumnKey, Player::getNumVisibleMounts));
+    private List<Column> getColumns(int firstColumnWidth, String firstColumnName, List<Player> visiblePlayers, Map<String, Long> numToSortBy) {
         List<Column> columns = new ArrayList<>();
         columns.add(Column.builder()
                 .key("name")
@@ -199,7 +200,7 @@ public class PlayerTracker {
                 .build());
         columns.addAll(visiblePlayers.stream()
                 .map(this::getColumn)
-                .sorted(Comparator.comparingLong(column -> numMounts.getOrDefault(column.getKey(), 0L)))
+                .sorted(Comparator.comparingLong(column -> numToSortBy.getOrDefault(column.getKey(), 0L)))
                 .collect(Collectors.toList()));
         return columns;
     }

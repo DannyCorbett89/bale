@@ -74,4 +74,8 @@ public class Player {
     public long getNumVisibleMounts() {
         return mounts == null ? 0 : mounts.stream().filter(Mount::isVisible).count();
     }
+
+    public long getNumMinions() {
+        return mounts == null ? 0 : minions.size();
+    }
 }
