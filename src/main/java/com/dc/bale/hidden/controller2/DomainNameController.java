@@ -51,8 +51,12 @@ public class DomainNameController {
             log.info("domainName has not been set, skipping IP check");
             return;
         }
+        updateARecord(domain.getValue());
+        updateARecord("dc-minecraft.com");
+    }
 
-        String url = "https://api.godaddy.com/v1/domains/" + domain.getValue() + "/records/A/@";
+    private void updateARecord(String domain) throws IOException {
+        String url = "https://api.godaddy.com/v1/domains/" + domain + "/records/A/@";
         Config key = configRepository.findByName("domainKey");
         Config secret = configRepository.findByName("domainSecret");
 
@@ -73,7 +77,7 @@ public class DomainNameController {
             String currentIpAddress = httpClient.get("http://checkip.amazonaws.com").replace("\n", "");
 
             if (!currentIpAddress.equals(registeredIpAddress)) {
-                log.info("Current IP [" + currentIpAddress + "] does not match website IP [" + registeredIpAddress + "], updating");
+                log.info("Current IP [" + currentIpAddress + "] does not match website IP [" + registeredIpAddress + "] for " + domain + " domain, updating");
                 record.setData(currentIpAddress);
                 List<Record> recordList = new ArrayList<>();
                 recordList.add(record);
