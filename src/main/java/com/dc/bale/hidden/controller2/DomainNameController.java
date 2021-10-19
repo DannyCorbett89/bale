@@ -51,8 +51,8 @@ public class DomainNameController {
             log.info("domainName has not been set, skipping IP check");
             return;
         }
+
         updateARecord(domain.getValue());
-        updateARecord("dc-minecraft.com");
     }
 
     private void updateARecord(String domain) throws IOException {
