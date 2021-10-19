@@ -53,6 +53,7 @@ public class DomainNameController {
         }
 
         updateARecord(domain.getValue());
+        updateARecord("dc-minecraft.com");
     }
 
     private void updateARecord(String domain) throws IOException {
