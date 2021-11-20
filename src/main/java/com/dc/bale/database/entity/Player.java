@@ -43,14 +43,6 @@ public class Player {
         return "player-" + id;
     }
 
-    public void clearMounts() {
-        mounts.clear();
-    }
-
-    public void clearMinions() {
-        minions.clear();
-    }
-
     public void addMount(Mount mount) {
         if (mount != null && !hasMount(mount.getName())) {
             mounts.add(mount);

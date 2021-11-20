@@ -189,7 +189,6 @@ public class FcLoader {
 
         @Override
         protected void load(Player player) {
-            player.clearMounts();
             String content = httpClient.get(BASE_URL + player.getUrl() + "/mount");
             Pattern hashPattern = Pattern.compile("<li class=\"mount__list_icon.+?data-tooltip_href=\"/lodestone/character/.+?/mount/tooltip/(.+?)\".+?</li>");
             Matcher hashMatcher = hashPattern.matcher(content);
@@ -219,7 +218,6 @@ public class FcLoader {
 
         @Override
         protected void load(Player player) {
-            player.clearMinions();
             String content = httpClient.get(BASE_URL + player.getUrl() + "/minion");
             Pattern hashPattern = Pattern.compile("<li class=\"minion__list_icon.+?data-tooltip_href=\"/lodestone/character/.+?/minion/tooltip/(.+?)\".+?</li>");
             Matcher hashMatcher = hashPattern.matcher(content);
