@@ -1,12 +1,14 @@
 package com.dc.bale.model.ffxivcollect;
 
 import com.dc.bale.database.entity.Source;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
 import java.util.List;
 
 @Data
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class FFXIVCollectMount {
     private long id;
     private String name;
