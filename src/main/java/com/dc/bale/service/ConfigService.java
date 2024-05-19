@@ -7,19 +7,22 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.util.Optional;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class ConfigService {
     private final ConfigRepository configRepository;
 
-    public String getConfig(String name) {
-        Config config = configRepository.findByName(name);
+    public String getMandatoryConfig(String name) {
+        return configRepository.findByName(name)
+                .map(Config::getValue)
+                .orElseThrow(() -> new ConfigException("Unable to find config: " + name));
+    }
 
-        if (config == null) {
-            throw new ConfigException("Unable to find config: " + name);
-        }
-
-        return config.getValue();
+    public Optional<String> getConfig(String name) {
+        return configRepository.findByName(name)
+                .map(Config::getValue);
     }
 }

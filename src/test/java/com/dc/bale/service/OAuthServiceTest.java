@@ -49,8 +49,8 @@ public class OAuthServiceTest {
     }
 
     private void givenCredentials() {
-        when(configService.getConfig(eq("clientID"))).thenReturn("92120405-88f1-410d-8fe9-80ba8ab1e806");
-        when(configService.getConfig(eq("clientSecret"))).thenReturn("9UhaNbmSnaTzEaE0UbWR2ZpgK6Nvufqxwj2AxOM9");
+        when(configService.getMandatoryConfig(eq("clientID"))).thenReturn("92120405-88f1-410d-8fe9-80ba8ab1e806");
+        when(configService.getMandatoryConfig(eq("clientSecret"))).thenReturn("9UhaNbmSnaTzEaE0UbWR2ZpgK6Nvufqxwj2AxOM9");
     }
 
     private void givenTokenRS(String token, int expiresIn) {

@@ -25,8 +25,8 @@ public class OAuthService {
     public OAuthToken getOAuthToken() {
         Instant currentTime = Instant.now();
         if (currentTime.isAfter(expiryDate)) {
-            String clientID = configService.getConfig("clientID");
-            String clientSecret = configService.getConfig("clientSecret");
+            String clientID = configService.getMandatoryConfig("clientID");
+            String clientSecret = configService.getMandatoryConfig("clientSecret");
             String formData = "name=\"grant_type\"\r\n\r\nclient_credentials";
 
             TokenRS response = httpClient.multipart(TOKEN_URL, clientID, clientSecret, formData, TokenRS.class);

@@ -42,7 +42,7 @@ public class FcLoader {
 
     void loadPlayer(String type, Function<Player, PlayerLoader> getLoader) {
         log.info("Loading player {}...", type);
-        String freeCompanyUrl = configService.getConfig("freeCompanyUrl");
+        String freeCompanyUrl = configService.getMandatoryConfig("freeCompanyUrl");
         String content = httpClient.get(BASE_URL + freeCompanyUrl);
 
         Map<String, Player> players = playerRepository.findAll().stream()
@@ -155,7 +155,7 @@ public class FcLoader {
     }
 
     String getFCPageContent(int page) {
-        String freeCompanyUrl = configService.getConfig("freeCompanyUrl");
+        String freeCompanyUrl = configService.getMandatoryConfig("freeCompanyUrl");
         String url = BASE_URL + freeCompanyUrl;
 
         if (page >= 1) {
