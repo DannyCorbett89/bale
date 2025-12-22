@@ -8,6 +8,8 @@ import com.dc.bale.exception.MountException;
 import com.dc.bale.model.AvailableMount;
 import com.dc.bale.model.Column;
 import com.dc.bale.model.MountRS;
+import com.dc.bale.model.PlayerV2RS;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -31,14 +33,10 @@ public class PlayerTracker {
     private final FcLoader fcLoader;
     private final InstanceService instanceService;
 
+    @Getter
     private String lastUpdated = "Never";
 
-    public String getLastUpdated() {
-        return lastUpdated;
-    }
-
-    public List<MountRS> getMounts() {
-        List<Player> visiblePlayers = playerService.getPlayersVisibleForMounts();
+    public List<MountRS> getMounts(List<Player> visiblePlayers) {
         List<Mount> totalMounts = mountRepository.findAllByVisible(true);
         Map<Long, Instance> instances = instanceService.getInstances(totalMounts);
 
@@ -60,8 +58,12 @@ public class PlayerTracker {
                 .id(mount.getId())
                 .name(getName(mount, instances))
                 .players(players.stream()
-                        .filter(player -> playerDoesNotHaveMount(mount, player))
-                        .collect(Collectors.toMap(player -> "player-" + player.getId(), player -> "X")))
+                        .map(player -> PlayerV2RS.builder()
+                                .name(player.getName())
+                                .owned(player.hasMount(mount.getName()))
+                                .build())
+                        .collect(Collectors.toList())
+                )
                 .build();
     }
 

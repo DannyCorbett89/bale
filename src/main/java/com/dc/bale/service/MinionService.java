@@ -5,6 +5,7 @@ import com.dc.bale.database.dao.PlayerRepository;
 import com.dc.bale.database.entity.Minion;
 import com.dc.bale.database.entity.Player;
 import com.dc.bale.model.MinionRS;
+import com.dc.bale.model.PlayerV2RS;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -32,9 +33,30 @@ public class MinionService {
         }
     }
 
+    public synchronized void addMinion(long id, String name) {
+        Minion minion = minionRepository.findOne(id);
+
+        if (minion == null) {
+            minionRepository.save(Minion.builder()
+                    .id(id)
+                    .name(name)
+                    .build());
+        }
+    }
+
     public List<MinionRS> getMinions() {
         List<Player> visiblePlayers = playerRepository.findByMinionsVisibleTrue();
         List<Minion> totalMinions = minionRepository.findAll();
+        return totalMinions.stream()
+                .filter(minion -> anyPlayerNeedsMinion(minion, visiblePlayers))
+                .map(minion -> getPlayersNeedingMinion(visiblePlayers, minion))
+                .sorted(Comparator.comparing(MinionRS::getName))
+                .collect(Collectors.toList());
+    }
+
+    public List<MinionRS> getMinions(List<Player> visiblePlayers) {
+        List<Minion> totalMinions = minionRepository.findAll();
+
         return totalMinions.stream()
                 .filter(minion -> anyPlayerNeedsMinion(minion, visiblePlayers))
                 .map(minion -> getPlayersNeedingMinion(visiblePlayers, minion))
@@ -50,10 +72,13 @@ public class MinionService {
         return MinionRS.builder()
                 .id(minion.getId())
                 .name(minion.getDisplayName())
-                .lodestoneId(minion.getLodestoneId())
                 .players(players.stream()
-                        .filter(player1 -> playerDoesNotHaveMinion(minion, player1))
-                        .collect(Collectors.toMap(player -> "player-" + player.getId(), player -> "X")))
+                        .map(player -> PlayerV2RS.builder()
+                                .name(player.getName())
+                                .owned(player.hasMinion(minion.getName()))
+                                .build())
+                        .collect(Collectors.toList())
+                )
                 .build();
     }
 

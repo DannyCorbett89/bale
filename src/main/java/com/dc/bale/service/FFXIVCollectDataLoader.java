@@ -1,6 +1,7 @@
 package com.dc.bale.service;
 
 import com.dc.bale.database.entity.Mount;
+import com.dc.bale.database.entity.Source;
 import com.dc.bale.model.ffxivcollect.MinionsRS;
 import com.dc.bale.model.ffxivcollect.MountsRS;
 import com.dc.bale.util.SourceType;
@@ -37,7 +38,7 @@ public class FFXIVCollectDataLoader {
         log.info("Loading minions...");
         MinionsRS minions = ffxivCollectAPI.getMinions();
         minions.getResults()
-                .forEach(ffxivCollectMinion -> minionService.addMinion(ffxivCollectMinion.getName()));
+                .forEach(minion -> minionService.addMinion(minion.getId(), minion.getName()));
         log.info("Finished loading minions");
         playerTracker.loadMinions();
     }
@@ -55,9 +56,24 @@ public class FFXIVCollectDataLoader {
     private void storeMounts(MountsRS mounts) {
         mounts.getResults()
                 .forEach(ffxivCollectMount -> {
-                    Mount mount = mountService.addMount(ffxivCollectMount.getName());
+                    Mount mount = mountService.addMount(ffxivCollectMount.getId(), ffxivCollectMount.getName());
                     ffxivCollectMount.getSources()
+                            .stream()
+                            .filter(source -> source.getRelatedType() != null)
+                            .filter(source -> source.getText() != null)
+                            .filter(this::isValidName)
                             .forEach(source -> instanceService.addInstance(source.getRelatedId(), source.getType(), source.getText(), mount));
                 });
+    }
+
+    private boolean isValidName(Source source) {
+        String name = source.getText().toLowerCase();
+        boolean valid = name.contains("extreme") || name.contains("minstrel") || name.contains("savage");
+
+        if(!valid) {
+            log.info("Skipping invalid mount source: {}", source.getText());
+        }
+
+        return valid;
     }
 }

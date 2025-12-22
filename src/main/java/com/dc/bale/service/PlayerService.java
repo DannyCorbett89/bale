@@ -59,11 +59,15 @@ public class PlayerService {
     }
 
     public List<Player> listPlayersForMounts() {
-        return playerRepository.findByMountsVisibleFalseOrderByName();
+        return playerRepository.findByMountsVisibleFalseOrderByName().stream()
+                .sorted(Comparator.comparing(player -> player.getRank().getId()))
+                .collect(Collectors.toList());
     }
 
     public List<Player> listPlayersForMinions() {
-        return playerRepository.findByMinionsVisibleFalseOrderByName();
+        return playerRepository.findByMinionsVisibleFalseOrderByName().stream()
+                .sorted(Comparator.comparing(player -> player.getRank().getId()))
+                .collect(Collectors.toList());
     }
 
     public List<Player> listVisiblePlayersForMounts() {
@@ -106,11 +110,11 @@ public class PlayerService {
         playerRepository.delete(players);
     }
 
-    List<Player> getPlayersVisibleForMounts() {
+    public List<Player> getPlayersVisibleForMounts() {
         return playerRepository.findByMountsVisibleTrue();
     }
 
-    List<Player> getPlayersVisibleForMinions() {
+    public List<Player> getPlayersVisibleForMinions() {
         return playerRepository.findByMinionsVisibleTrue();
     }
 }

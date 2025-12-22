@@ -5,7 +5,8 @@ import com.dc.bale.database.entity.Player;
 import com.dc.bale.exception.MountException;
 import com.dc.bale.exception.PlayerException;
 import com.dc.bale.model.AvailableMount;
-import com.dc.bale.model.Response;
+import com.dc.bale.model.MountsRS;
+import com.dc.bale.model.PlayerRS;
 import com.dc.bale.service.PlayerService;
 import com.dc.bale.service.PlayerTracker;
 import com.google.common.base.Strings;
@@ -18,6 +19,7 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.transaction.Transactional;
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -32,11 +34,20 @@ public class MountController {
     private final PlayerService playerService;
 
     @GetMapping(produces = {MediaType.APPLICATION_JSON_VALUE})
-    public ResponseEntity<Response> listMounts() {
-        Response response = Response.builder()
+    public ResponseEntity<MountsRS> listMounts() {
+        List<Player> visiblePlayers = playerService.getPlayersVisibleForMounts().stream()
+                .sorted(Comparator.comparing(Player::getNumVisibleMounts))
+                .collect(Collectors.toList());
+
+        MountsRS response = MountsRS.builder()
+                .players(visiblePlayers.stream()
+                        .map(player -> PlayerRS.builder()
+                                .id(player.getId())
+                                .name(player.getName())
+                                .build())
+                        .collect(Collectors.toList()))
+                .mounts(playerTracker.getMounts(visiblePlayers))
                 .lastUpdated(playerTracker.getLastUpdated())
-                .columns(playerTracker.getMountColumns(200))
-                .players(playerTracker.getMounts())
                 .build();
 
         return ResponseEntity.ok(response);

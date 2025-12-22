@@ -13,6 +13,11 @@ The server running this application needs the following installed:
   - This only applies if you want the application to automatically keep your server's IP up to date with the hostname provider whenever it changes. [DomainNameController](src/main/java/com/dc/bale/hidden/controller2/DomainNameController.java) will handle this but currently it is only written to work with the GoDaddy API. If you use any other provider, you will need to handle this yourself
   
 ## Usage
+### Install the database
+```
+docker run --name bale-db -e MYSQL_ROOT_PASSWORD=bale -p 3306:3306 -d mysql
+sudo mysql -uroot -P3306 -p
+```
 ### Set up the database
 1. In MySQL, create an empty database
 2. Run the [tables.sql](src/main/resources/tables.sql) file into your new database

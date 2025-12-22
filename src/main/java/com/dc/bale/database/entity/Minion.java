@@ -14,7 +14,6 @@ import javax.persistence.*;
 @AllArgsConstructor
 public class Minion {
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
     private long id;
     private String name;
     @Column(name = "lodestone_id")

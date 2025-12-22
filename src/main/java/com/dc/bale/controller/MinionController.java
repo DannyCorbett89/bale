@@ -2,7 +2,8 @@ package com.dc.bale.controller;
 
 import com.dc.bale.database.entity.Player;
 import com.dc.bale.exception.PlayerException;
-import com.dc.bale.model.MinionsResponse;
+import com.dc.bale.model.MinionsRS;
+import com.dc.bale.model.PlayerRS;
 import com.dc.bale.service.MinionService;
 import com.dc.bale.service.PlayerService;
 import com.dc.bale.service.PlayerTracker;
@@ -15,6 +16,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -30,11 +32,20 @@ public class MinionController {
     private final MinionService minionService;
 
     @GetMapping(produces = {MediaType.APPLICATION_JSON_VALUE})
-    public ResponseEntity<MinionsResponse> listMinions() {
-        MinionsResponse response = MinionsResponse.builder()
+    public ResponseEntity<MinionsRS> listMinions() {
+        List<Player> visiblePlayers = playerService.getPlayersVisibleForMinions().stream()
+                .sorted(Comparator.comparing(Player::getNumMinions))
+                .collect(Collectors.toList());
+
+        MinionsRS response = MinionsRS.builder()
+                .players(visiblePlayers.stream()
+                        .map(player -> PlayerRS.builder()
+                                .id(player.getId())
+                                .name(player.getName())
+                                .build())
+                        .collect(Collectors.toList()))
+                .minions(minionService.getMinions(visiblePlayers))
                 .lastUpdated(playerTracker.getLastUpdated())
-                .columns(playerTracker.getMinionColumns(200))
-                .players(minionService.getMinions())
                 .build();
 
         return ResponseEntity.ok(response);
